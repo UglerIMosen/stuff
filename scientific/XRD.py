@@ -8,80 +8,77 @@ from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.special import erf
 
-class panalytical(object):
-    
-    def __init__(self):
-        pass
+def read_xrdml_wavelength(path):
+    #wave_length of source
+    raw_file = open(path)
+    lines = raw_file.readlines()
+    for index, line in enumerate(lines):
+        if line.find('<usedWavelength intended="K-Alpha 1">') != -1:
+            kAlpha1 = [float(value) for value in re.findall(r'\d+\.\d+',lines[index+1])]
+            kAlpha2 = [float(value) for value in re.findall(r'\d+\.\d+',lines[index+2])]
+            ratio_kA2_over_kA1 = [float(value) for value in re.findall(r'\d+\.\d+',lines[index+4])]
+            wavelength = (ratio_kA2_over_kA1[0]*kAlpha2[0]+kAlpha1[0])/(ratio_kA2_over_kA1[0]+1)
+            break
+    return wavelength
 
-    def read_xrdml_wavelength(self,path):
-        #wave_length of source
-        raw_file = open(path)
-        lines = raw_file.readlines()
-        for index, line in enumerate(lines):
-            if line.find('<usedWavelength intended="K-Alpha 1">') != -1:
-                kAlpha1 = [float(value) for value in re.findall(r'\d+\.\d+',lines[index+1])]
-                kAlpha2 = [float(value) for value in re.findall(r'\d+\.\d+',lines[index+2])]
-                ratio_kA2_over_kA1 = [float(value) for value in re.findall(r'\d+\.\d+',lines[index+4])]
-                wavelength = (ratio_kA2_over_kA1[0]*kAlpha2[0]+kAlpha1[0])/(ratio_kA2_over_kA1[0]+1)
-                break
-        return wavelength
+def read_xrdml_pattern(path):
+#read pattern 
+    file = open(path)
+    lines = file.readlines()
 
-    def read_xrdml_pattern(self,path):
-    #read pattern 
-        file = open(path)
-        lines = file.readlines()
+    for index, line in enumerate(lines):
+        if line.find('<positions axis="2Theta" unit="deg">') != -1:
+            start_angle = [float(value) for value in re.findall(r'\d+\.\d+',lines[index+1])]
+            end_angle = [float(value) for value in re.findall(r'\d+\.\d+',lines[index+2])]
     
-        for index, line in enumerate(lines):
-            if line.find('<positions axis="2Theta" unit="deg">') != -1:
-                start_angle = [float(value) for value in re.findall(r'\d+\.\d+',lines[index+1])]
-                end_angle = [float(value) for value in re.findall(r'\d+\.\d+',lines[index+2])]
+        if line.find('intensities') != -1:
+            spectrum = [float(value) for value in re.findall(r'\d+',lines[index])]
+            spectrum = np.array(spectrum)
+    
+        if line.find('<commonCountingTime unit="seconds">') != -1:
+            integral_time = float(re.findall(r'\d+\.\d+',lines[index])[0])
         
-            if line.find('intensities') != -1:
-                spectrum = [float(value) for value in re.findall(r'\d+',lines[index])]
-                spectrum = np.array(spectrum)
         
-            if line.find('<commonCountingTime unit="seconds">') != -1:
-                integral_time = float(re.findall(r'\d+\.\d+',lines[index])[0])
-            
-            
-        angle_step = (end_angle[0]-start_angle[0])/len(spectrum)
-        angles = np.arange(start_angle[0],end_angle[0],angle_step)
-        return angles, spectrum, integral_time
+    angle_step = (end_angle[0]-start_angle[0])/len(spectrum)
+    angles = np.arange(start_angle[0],end_angle[0],angle_step)
+    return angles, spectrum, integral_time
 
-    def read_xrdml_temp(self,path,temp_line,time_line):
-        raw_file = file_name
-        lines = open(raw_file).readlines()
-        for index, line in enumerate(lines):
-            if line.find('<nonAmbientPoints>') != -1:
-                break
-        temperature = np.array([float(value) for value in re.findall(r'\d+',rawdata[index+2])])
-    
-        time = np.array([float(value) for value in re.findall(r'\d+',rawdata[index+1])])
-        len_diff = len(time) - len(temperature)
-        if len_diff > 0:
-            time = time[0:len(time)-len_diff]
-        elif len_diff < 0:
-            temperature = temperature[0:len(temperature)+len_diff]
-    
-        return temperature, time
+def read_xrdml_temp(path,temp_line,time_line):
+    raw_file = file_name
+    lines = open(raw_file).readlines()
+    for index, line in enumerate(lines):
+        if line.find('<nonAmbientPoints>') != -1:
+            break
+    temperature = np.array([float(value) for value in re.findall(r'\d+',rawdata[index+2])])
 
-    def read_xrdml_measurement_time(self,path):
-        #creation time of data file
-        raw_file = open(path)
-        lines = raw_file.readlines()
-        for index, line in enumerate(lines):
-            if line.find('<startTimeStamp>') != -1:
-                out = [int(value) for value in re.findall(r'\d+',line)]
-                break
-            absolute_time = time.mktime(tuple([*out,-1]))
-            time_object = time.localtime(absolute_time)
-        return absolute_time.time_object
+    time = np.array([float(value) for value in re.findall(r'\d+',rawdata[index+1])])
+    len_diff = len(time) - len(temperature)
+    if len_diff > 0:
+        time = time[0:len(time)-len_diff]
+    elif len_diff < 0:
+        temperature = temperature[0:len(temperature)+len_diff]
+
+    return temperature, time
+
+def read_xrdml_measurement_time(path):
+    #creation time of data file
+    raw_file = open(path)
+    lines = raw_file.readlines()
+    for index, line in enumerate(lines):
+        if line.find('<startTimeStamp>') != -1:
+            out = [int(value) for value in re.findall(r'\d+',line)]
+            break
+        absolute_time = time.mktime(tuple([*out,-1]))
+        time_object = time.localtime(absolute_time)
+    return absolute_time.time_object
+
+
 
 class common(object):
 
     def __init__(self):
         self.anode = 'Cu'
-        self.anode_lines = {Cu: [1.5405980,1.5444260]}
+        self.anode_lines = {'Cu': [1.5405980,1.5444260]}
 
     def inverse_length(self,angles,wavelength):
         #Bragg's law, for angles to inverse length
@@ -92,13 +89,15 @@ class common(object):
         return formfactor*wavelength/((FWHM*np.pi/180)*np.cos(0.5*angle_2theta*np.pi/180))
 
     def spectral_angle_splitting(self,x_0):
-        return 2*np.arcsin( (self.anode_lines[anode][1]/self.anode_lines[anode][0])*np.sin((x_0/2)*np.pi/180) )*180/np.pi
+        return 2*np.arcsin( (self.anode_lines[self.anode][1]/self.anode_lines[self.anode][0])*np.sin((x_0/2)*np.pi/180) )*180/np.pi
 
     def angle_200(self,angle_111):
         return 2*np.arcsin(2*np.sin((angle_111/2)*np.pi/180)/np.sqrt(3))*180/np.pi
 
     def FWHM_200(self,FWHM_111,angle_111):
-        return FWHM_111*np.cos((angle_111/2)*np.pi/180)/np.cos((angle_200(angle_111)/2)*np.pi/180)
+        return FWHM_111*np.cos((angle_111/2)*np.pi/180)/np.cos((self.angle_200(angle_111)/2)*np.pi/180)
+
+
 
 class xrd_fitting(object):
 
@@ -108,7 +107,7 @@ class xrd_fitting(object):
 
     def lorentz(self,x,x_0,FWHM,spectral_splitting=True): #gamma = (FWHM/2)
         if spectral_splitting:
-            return (1/(np.pi*(FWHM/2)*(1+((x-x_0)/((FWHM/2)))**2)) + self.spectral_ratio*/(np.pi*(FWHM/2)*(1+((x-self.common.spectral_angle_splitting(x_0))/((FWHM/2)))**2)))/(1+self.spectral_ratio)
+            return (1/(np.pi*(FWHM/2)*(1+((x-x_0)/((FWHM/2)))**2)) + self.spectral_ratio/(np.pi*(FWHM/2)*(1+((x-self.common.spectral_angle_splitting(x_0))/((FWHM/2)))**2)))/(1+self.spectral_ratio)
         else:
             return 1/(np.pi*(FWHM/2)*(1+((x-x_0)/((FWHM/2)))**2))
 
@@ -133,9 +132,12 @@ class xrd_fitting(object):
     def func(self,x,x_1,FWHM_1,I_1,I_ratio_1,x_2,FWHM_2,I_2,I_ratio_2,x_3,FWHM_3,I_3,slope_0,slope_1,slope_2,n):
         return self.fcc(x,x_1,FWHM_1,I_1,I_ratio_1,n)+self.fcc(x,x_2,FWHM_2,I_2,I_ratio_2,n)+I_3*self.pseudo_voigt(x,x_3,FWHM_3,n)+self.background(x,slope_0,slope_1,slope_2)
 
-    def fit_to_data(self,pattern,plot=False,init_guess=[42.8, 2,   1000,   0.44, 43.6, 2,   1000,   0.44, 44.4, 0.5, 10000,  5000,  1000,  0.1, 0.1]):
-        popt, pcov = curve_fit(func,np.array(pattern[0]),np.array(pattern[1]),p0=initial_guess,bounds=(lower_bound,upper_bound))
-            
+    def fit_to_data(self,pattern,plot=False,init_guess=[42.8, 2,   1000,   0.44, 43.6, 2,   1000,   0.44, 44.4, 0.5, 10000,  5000,  1000,  0.1, 0.1],lower_bound=None,upper_bound=None):
+        if lower_bound == None and upper_bound == None:
+            popt, pcov = curve_fit(self.func,np.array(pattern[0]),np.array(pattern[1]),p0=init_guess)
+        else:
+            popt, pcov = curve_fit(self.func,np.array(pattern[0]),np.array(pattern[1]),p0=init_guess,bounds=(lower_bound,upper_bound))
+                
         class result:
             def __init__(self):
                 self.popt = popt
