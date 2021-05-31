@@ -180,7 +180,7 @@ class filters(object):
     def median_filter(self,data,cycles = 1):
         new_data = data
         for n in range(cycles):
-           data_0 = new_data[:-2]
+            data_0 = new_data[:-2]
             data_1 = new_data[1:-1]
             data_2 = new_data[2:]
             new_data = [new_data[0]]

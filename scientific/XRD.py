@@ -1,5 +1,6 @@
 import numpy as np
 import re
+import time
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -47,14 +48,15 @@ class panalytical(object):
         angles = np.arange(start_angle[0],end_angle[0],angle_step)
         return angles, spectrum, integral_time
 
-    def read_xrdml_temp(file_name,temp_line,time_line):
-        file = file_name
-        rawdata = open(file).readlines()
-        temperature = [float(value) for value in re.findall(r'\d+',rawdata[temp_line])]
-        temperature = np.array(temperature)
+    def read_xrdml_temp(self,path,temp_line,time_line):
+        raw_file = file_name
+        lines = open(raw_file).readlines()
+        for index, line in enumerate(lines):
+            if line.find('<nonAmbientPoints>') != -1:
+                break
+        temperature = np.array([float(value) for value in re.findall(r'\d+',rawdata[index+2])])
     
-        time = [float(value) for value in re.findall(r'\d+',rawdata[time_line])]
-        time = np.array(time)
+        time = np.array([float(value) for value in re.findall(r'\d+',rawdata[index+1])])
         len_diff = len(time) - len(temperature)
         if len_diff > 0:
             time = time[0:len(time)-len_diff]
@@ -62,6 +64,18 @@ class panalytical(object):
             temperature = temperature[0:len(temperature)+len_diff]
     
         return temperature, time
+
+    def read_xrdml_measurement_time(self,path):
+        #creation time of data file
+        raw_file = open(path)
+        lines = raw_file.readlines()
+        for index, line in enumerate(lines):
+            if line.find('<startTimeStamp>') != -1:
+                out = [int(value) for value in re.findall(r'\d+',line)]
+                break
+            absolute_time = time.mktime(tuple([*out,-1]))
+            time_object = time.localtime(absolute_time)
+        return absolute_time.time_object
 
 class common(object):
 
@@ -74,7 +88,7 @@ class common(object):
         angles = np.pi*np.array(angles)/180
         return 2*np.sin(angles/2)/wavelength
 
-    def scherrer(angle_2theta,FWHM,broadening=0.1,formfactor = 0.9, wavelength=1.5405980):
+    def scherrer(self,angle_2theta,FWHM,broadening=0.1,formfactor = 0.9, wavelength=1.5405980):
         return formfactor*wavelength/((FWHM*np.pi/180)*np.cos(0.5*angle_2theta*np.pi/180))
 
     def spectral_angle_splitting(self,x_0):
