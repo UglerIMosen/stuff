@@ -43,15 +43,15 @@ def read_xrdml_pattern(path):
     angles = np.arange(start_angle[0],end_angle[0],angle_step)
     return angles, spectrum, integral_time
 
-def read_xrdml_temp(path,temp_line,time_line):
-    raw_file = file_name
+def read_xrdml_temp(path):
+    raw_file = path
     lines = open(raw_file).readlines()
     for index, line in enumerate(lines):
         if line.find('<nonAmbientPoints>') != -1:
             break
-    temperature = np.array([float(value) for value in re.findall(r'\d+',rawdata[index+2])])
+    temperature = np.array([float(value) for value in re.findall(r'\d+',lines[index+2])])
 
-    time = np.array([float(value) for value in re.findall(r'\d+',rawdata[index+1])])
+    time = np.array([float(value) for value in re.findall(r'\d+',lines[index+1])])
     len_diff = len(time) - len(temperature)
     if len_diff > 0:
         time = time[0:len(time)-len_diff]
