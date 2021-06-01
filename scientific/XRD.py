@@ -68,9 +68,9 @@ def read_xrdml_measurement_time(path):
         if line.find('<startTimeStamp>') != -1:
             out = [int(value) for value in re.findall(r'\d+',line)]
             break
-        absolute_time = time.mktime(tuple([*out,-1]))
-        time_object = time.localtime(absolute_time)
-    return absolute_time.time_object
+    absolute_time = time.mktime(tuple([*out,-1]))
+    time_object = time.localtime(absolute_time)
+    return absolute_time, time_object
 
 
 
