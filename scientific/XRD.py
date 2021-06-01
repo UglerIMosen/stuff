@@ -57,8 +57,10 @@ def read_xrdml_temp(path):
         time = time[0:len(time)-len_diff]
     elif len_diff < 0:
         temperature = temperature[0:len(temperature)+len_diff]
-
-    return temperature, time
+    
+    absolute_time = read_xrdml_measurement_time(path)[0]
+    
+    return temperature, time, absolute_time
 
 def read_xrdml_measurement_time(path):
     #creation time of data file
