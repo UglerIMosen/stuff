@@ -2,10 +2,33 @@
 """
 @author: thoe
 """
-
 import numpy as np
 import re
 from datetime import datetime, timedelta
+import tkinter as tk
+from tkinter import ttk
+from tkinter import filedialog
+import sys
+
+def find_file(): 
+    root = tk.Tk()
+    style = ttk.Style(root) 
+    style.theme_use("clam") 
+    root.geometry("500x500")
+    filepath = filedialog.askopenfilename(parent=root, initialdir="", initialfile="tmp")
+    if sys.platform != 'darwin':
+        root.destroy()
+    return filepath
+
+def find_directory():
+    root = tk.Tk()
+    style = ttk.Style(root) 
+    style.theme_use("clam") 
+    root.geometry("500x500")
+    path = filedialog.askdirectory(parent=root) 
+    if sys.platform != 'darwin':
+        root.destroy()
+    return path
 
 def load_data_sheet(path, outcomment='#'):
     #This can open both .csv or tabulated data.
