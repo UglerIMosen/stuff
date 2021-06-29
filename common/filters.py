@@ -6,8 +6,9 @@
 import numpy as np
 import re
 from datetime import datetime, timedelta
+import warnings
 
-from stuff import fermi
+from stuff.common.stuff import fermi
 
 def smooth(f,pts):
     extent = np.ones(pts)/pts
@@ -31,3 +32,15 @@ def high_pass_filter(data1D,cut,soft,damp=1e-6):
     fft_filtered_data = filter_mask*np.fft.fft(data1D)
     filtered_data = abs(np.fft.ifft(fft_filtered_data))
     return filtered_data
+    
+def bin_data(xy_data, range = False, resolution=1):
+    if not range:
+        range = [xy_data[0][0],xy_data[0][-1]]
+    if resolution < np.mean(np.diff(xy_data[0])):
+        warnings.warn('The x-data seems inadequate for the chosen resolution. This might cause problems')
+    bins = np.arange(range[0]-resolution/2,range[1]+resolution/2,resolution)
+    binned_x_data = np.arange(range[0],range[1],resolution)
+    
+    mask = np.logical_and(xy_data[0]>range[0],xy_data[0]<range[1])
+    binned_y_data = (np.histogram(xy_data[0][mask],bins,weights=xy_data[1][mask])[0] / np.histogram(xy_data[0][mask],bins)[0])
+    return np.array([binned_x_data,binned_y_data])
