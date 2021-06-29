@@ -30,6 +30,34 @@ def find_directory():
         root.destroy()
     return path
 
+def load_data_sheet_with_names(path, outcomment='#', name_spacing = '  ', names_line = -1):
+    #This can open both .csv or tabulated data.
+    #The data is stored in a numpy ndarray typed list, with dimensions matching the data
+    #
+    #It will load names as strings from the text-line before the data begins. This can be changes by "names_line", where a value of "-1" is the line before the data
+    file=open(path,'r')
+    lines=file.readlines()
+    mask = [outcomment not in i for i in lines]
+    mask_names = list(np.diff(mask))
+    names_index = mask_names.index(True)+names_line+1
+    names = lines[names_index].split(name_spacing)
+    filtered_lines = np.array(lines)[mask]
+    data_out = np.zeros(shape=(len(re.findall(r"[+-]? *(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?",filtered_lines[0])),len(filtered_lines)))
+    for row,line in enumerate(filtered_lines):
+        values = re.findall(r"[+-]? *(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?",line)
+        for coloumn,value in enumerate(values):
+            try:
+                data_out[coloumn,row]=float(value)
+            except:
+                print('In text: '+str(filtered_lines)+'; of line: '+str(row)+'of the file: '+path+'; an error occurred')
+    
+    data_dict = {}
+    for name,data in zip(names,data_out):
+        data_dict[name] = data
+    
+    return data_dict
+
+
 def load_data_sheet(path, outcomment='#'):
     #This can open both .csv or tabulated data.
     #The data is stored in a numpy ndarray typed list, with dimensions matching the data
