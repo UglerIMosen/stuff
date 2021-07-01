@@ -33,14 +33,38 @@ def high_pass_filter(data1D,cut,soft,damp=1e-6):
     filtered_data = abs(np.fft.ifft(fft_filtered_data))
     return filtered_data
     
-def bin_data(xy_data, range = False, resolution=1):
-    if not range:
-        range = [xy_data[0][0],xy_data[0][-1]]
+def bin_data(xy_data, xrange = False, resolution=1):
+    xy_data = [np.array(xy_data[0]),np.array(xy_data[1])]
+    if not xrange:
+        xrange = [xy_data[0][0],xy_data[0][-1]]
     if resolution < np.mean(np.diff(xy_data[0])):
         warnings.warn('The x-data seems inadequate for the chosen resolution. This might cause problems')
-    bins = np.arange(range[0]-resolution/2,range[1]+resolution/2,resolution)
-    binned_x_data = np.arange(range[0],range[1],resolution)
+    bins = np.arange(xrange[0]-resolution/2,xrange[1]+resolution/2,resolution)
+    binned_x_data = np.arange(xrange[0],xrange[1],resolution)
     
-    mask = np.logical_and(xy_data[0]>range[0],xy_data[0]<range[1])
+    mask = np.logical_and(xy_data[0]>xrange[0],xy_data[0]<xrange[1])
     binned_y_data = (np.histogram(xy_data[0][mask],bins,weights=xy_data[1][mask])[0] / np.histogram(xy_data[0][mask],bins)[0])
     return np.array([binned_x_data,binned_y_data])
+    
+def derivative(xy_data,order=1,epsilon = 1e-7):
+    if order == 0:
+        return xy_data
+    else:
+        x  = np.array(xy_data[0])
+        dx = xy_data[0]
+        dy = xy_data[1]
+        for i in range(0,order):
+            dx_w_zeros = np.diff(dx)
+            dy = np.diff(dy)
+            dx = []
+            for value in dx_w_zeros:
+                if value < epsilon:
+                    dx.append(epsilon)
+                else:
+                    dx.append(value)
+            dydx = dy/dx
+            x = 0.5*(x[:-1]+x[1:])
+        return [x,dydx]
+    
+    
+    
