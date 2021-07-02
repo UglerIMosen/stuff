@@ -75,6 +75,7 @@ def load_data_sheet(path, outcomment='#'):
                 print('In text: '+str(filtered_lines)+'; of line: '+str(row)+'of the file: '+path+'; an error occurred')
     return data_out
 
+  
 def load_qms_asc(path):
     if path[-4:] == '.asc':
         raw_file = open(path)
@@ -194,3 +195,21 @@ def Read_SAC(filename, MassNumbers = np.array([-1])):
             l = l + 3 + Cal_NbPts[0]
     f.close()
     return data_cycle, Time, u, time_cycle, Start_time
+
+def read_RGA_prism_dat(path):
+    #TAkes a data-file, read the lines, split the lines in '\t', and makes a differential analysis on, when the data starts. It reads the first line as names, and the rest as the data.
+    file=open(path,'r')
+    lines=file.readlines()
+    length = [len(i.split('\t')) for i in lines]
+    name_line = np.where(np.diff(length)==max(np.diff(length)))[0][0]+1
+    data_dict = {}
+    for key in lines[name_line].split('\t'):
+        data_dict[key] = []
+    for line in lines[name_line+1:]:
+        values = line.split('\t')
+        for key,value in zip(lines[name_line].split('\t'),values):
+            try:
+                data_dict[key].append(float(value))
+            except:
+                data_dict[key].append(value)
+    return data_dict
