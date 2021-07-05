@@ -11,25 +11,27 @@ from scipy.optimize import shgo
 
 import warnings
 
-from stuff.common.filters import derivative
+from stuff.common.filters import derivative, smooth
 
-def find_binding_energy(edge):
-    dev_edge = derivative(edge)
-    edge_2nd_dev_min = (dev_edge[0][np.where(dev_edge[1] == max(dev_edge[1]))[0][0]]+dev_edge[0][np.where(dev_edge[1] == min(dev_edge[1]))[0][0]])/2
+def find_binding_energy(edge,smooth_pts=1):
+    dev_edge = derivative([edge[0],smooth(edge[1],smooth_pts)])
+    dev2_edge = derivative([dev_edge[0][smooth_pts:-smooth_pts],dev_edge[1][smooth_pts:-smooth_pts]])
+    #edge_2nd_dev_min = (dev_edge[0][np.where(dev_edge[1] == max(dev_edge[1]))[0][0]]+dev_edge[0][np.where(dev_edge[1] == min(dev_edge[1]))[0][0]])/2
+    edge_2nd_dev_min = dev_edge[0][np.where(dev2_edge[1] == min(dev2_edge[1]))[0][0]]
     return edge_2nd_dev_min
 
-def calibrate_edge(edge,ref_edge):
+def calibrate_edge(edge,ref_edge,smooth_pts=1):
     #This function calibrates by the average between the minimum and maximum of the first derivative. This is more alternative than taking the minimum of the second derivative. But in terms of real data, the second derivative can be very very noisy. This solution should be close.
     #dev_edge = derivative(edge)
     #edge_2nd_dev_min = (dev_edge[0][np.where(dev_edge[1] == max(dev_edge[1]))[0][0]]+dev_edge[0][np.where(dev_edge[1] == min(dev_edge[1]))[0][0]])/2
-    edge_2nd_dev_min = find_binding_energy(edge)
-    ref_2nd_dev_min = find_binding_energy(ref_edge)
+    edge_2nd_dev_min = find_binding_energy(edge,smooth_pts=1)
+    ref_2nd_dev_min = find_binding_energy(ref_edge,smooth_pts=1)
     #dev_ref = derivative(ref_edge)
     #ref_2nd_dev_min = (dev_ref[0][np.where(dev_ref[1] == max(dev_ref[1]))[0][0]]+dev_ref[0][np.where(dev_ref[1] == min(dev_ref[1]))[0][0]])/2
     return ref_2nd_dev_min-edge_2nd_dev_min
 
-def normalise_fluorescence(edge,pre_edge_energy = -0.05, extended_edge_energy = 0.03):
-    bnd_energy = find_binding_energy(edge)
+def normalise_fluorescence(edge,pre_edge_energy = -0.05, extended_edge_energy = 0.03,smooth_pts=1):
+    bnd_energy = find_binding_energy(edge,smooth_pts=1)
     pre_edge = np.where(edge[0] < bnd_energy+pre_edge_energy)
     extended_edge = np.where(edge[0] > bnd_energy+extended_edge_energy)
 
