@@ -53,8 +53,10 @@ def load_data_sheet_with_names(path, outcomment='#', name_spacing = '  ', names_
     
     data_dict = {}
     for name,data in zip(names,data_out):
+        if name[-1:] == '\n':
+            name = name[:-1]
         data_dict[name] = data
-    
+        
     return data_dict
 
 
