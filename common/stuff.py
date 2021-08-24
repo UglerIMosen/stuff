@@ -19,3 +19,18 @@ def gauss(x_values,theta,intensity,sigma):
 
 def fermi( x, cut, soft, offset=1e-6):
     return ((0.5*erf(-(x-cut)/soft)+0.5)/(0.5*erf(-(0-cut)/soft)+0.5))+offset
+
+def format_of_file(file_name):
+    comma_index = file_name[::-1].find('.')
+    if comma_index == -1:
+        return None
+    else:
+        return file_name[-comma_index:]
+        
+def name_of_file(file_name):
+    comma_index = file_name[::-1].find('.')
+    if comma_index == -1:
+        return file_name
+    else:
+        return file_name[:-(comma_index+1)]
+    
