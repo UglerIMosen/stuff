@@ -41,6 +41,8 @@ def load_data_sheet_with_names(path, outcomment='#', name_spacing = '  ', names_
     mask_names = list(np.diff(mask))
     names_index = mask_names.index(True)+names_line+1
     names = lines[names_index].split(name_spacing)
+    if names[0] == outcomment:
+        names = names[1:]
     filtered_lines = np.array(lines)[mask]
     data_out = np.zeros(shape=(len(re.findall(r"[+-]? *(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?",filtered_lines[0])),len(filtered_lines)))
     for row,line in enumerate(filtered_lines):
