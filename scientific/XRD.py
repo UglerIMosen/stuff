@@ -221,11 +221,11 @@ class new_xrd_fitting(object):
     def bcc(self,x,x_1,FWHM_1,I_1,n):
         return I_1*self.pseudo_voigt(x,x_1,FWHM_1,n)
     
-    def func(self,x,x_1,FWHM_1,I_1,I_ratio_1,x_2,FWHM_2,I_2,x_3,FWHM_3,I_3,n,a):
+    def func(self,x,x_1,FWHM_1,I_1,I_ratio_1,x_2,FWHM_2,I_2,I_ratio_2,x_3,FWHM_3,I_3,n,a):
         #return self.fcc(x,x_1,FWHM_1,I_1,I_ratio_1,n)+self.fcc(x,x_2,FWHM_2,I_2,I_ratio_2,n)+I_3*self.pseudo_voigt(x,x_3,FWHM_3,n)+a
-        return self.fcc(x,x_1,FWHM_1,I_1,I_ratio_1,n)+self.fcc(x,x_2,FWHM_2,I_2,I_ratio_1,n)+I_3*self.pseudo_voigt(x,x_3,FWHM_3,n)+a
+        return self.fcc(x,x_1,FWHM_1,I_1,I_ratio_1,n)+self.fcc(x,x_2,FWHM_2,I_2,I_ratio_2,n)+I_3*self.pseudo_voigt(x,x_3,FWHM_3,n)+a
 
-    def fit_to_data(self,pattern,plot=False,init_guess=[42.6, 2.0, 10, 0.44, 43.25, 1.0, 10, 44.3, 0.9, 10, 0.1],lower_bound=None,upper_bound=None,bgk_radius=100):
+    def fit_to_data(self,pattern,plot=False,init_guess=[42.6, 2.0, 10, 0.44, 43.25, 1.0, 10, 0.44, 44.3, 0.9, 10, 0.1],lower_bound=None,upper_bound=None,bgk_radius=100):
         background = self.background(pattern[1],radius=bgk_radius)
         y_data = np.array(pattern[1])-np.array(background)
         
@@ -282,8 +282,8 @@ class new_xrd_fitting(object):
             f.plot(pattern[0],pattern[1],label='Data')
             f.plot(pattern[0],self.func(pattern[0],*popt)+res.bgk_data,label='best fit')
             f.plot(pattern[0],self.fcc(pattern[0],*popt[0:4],popt[-2])+res.bgk_data+popt[-1],label='Primary FCC')
-            f.plot(pattern[0],self.fcc(pattern[0],*popt[4:7],popt[3],popt[-2])+res.bgk_data+popt[-1],label='Shoulder FCC')
-            f.plot(pattern[0],self.bcc(pattern[0],*popt[7:10],popt[-2])+res.bgk_data+popt[-1],label='BCC')
+            f.plot(pattern[0],self.fcc(pattern[0],*popt[4:8],popt[-2])+res.bgk_data+popt[-1],label='Shoulder FCC')
+            f.plot(pattern[0],self.bcc(pattern[0],*popt[8:11],popt[-2])+res.bgk_data+popt[-1],label='BCC')
             f.plot(pattern[0],res.bgk_data+popt[-1],label='background')
             f.set_xlabel(r'2$\theta$ Diffraction angle [$^{\circ}$]')
             f.set_ylabel('Intensity [cts/s]')
