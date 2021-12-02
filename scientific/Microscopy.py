@@ -14,7 +14,7 @@ class spectroscopy(object):
     def __init__(self):
         pass
         
-    def load_edx(file):
+    def load_edx(self,file):
         file_object = open(file, 'r')
         file_lines = file_object.readlines()
     
@@ -27,7 +27,7 @@ class spectroscopy(object):
                 count.append(float(re.findall('[-+]?\d+\.\d+',line)[1]))
         return energy, count
 
-    def load_eels(file):
+    def load_eels(self,file):
         file_object = open(file, 'r')
         file_lines = file_object.readlines()
     
@@ -44,7 +44,7 @@ class TIA(object):
     def __init__(self):
         pass
 
-    def plot_edx_linescan(name):
+    def plot_edx_linescan(self,name):
         #virtuel haadf from edx-counts
         file = hs.load(name)
 
