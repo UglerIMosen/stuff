@@ -208,8 +208,8 @@ class new_xrd_fitting(object):
         else:
             return (1/((FWHM/(2*np.sqrt(2*np.log(2))))*np.sqrt(2*np.pi)))*np.exp(-(x-x_0)**2 / (2*(FWHM/(2*np.sqrt(2*np.log(2))))**2))
 
-    def pseudo_voigt(self,x,x_0,FWHM,n):
-        return (1-n)*self.lorentz(x,x_0,FWHM)+n*self.gaussian(x,x_0,FWHM)
+    def pseudo_voigt(self,x,x_0,FWHM,n,FWHM_instrument=0.08):
+        return (1-n)*self.lorentz(x,x_0,FWHM)+n*self.gaussian(x,x_0,FWHM_instrument)
 
     def background(self,y,radius=100):
         self.bgk_ball_radius = radius
