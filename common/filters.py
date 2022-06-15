@@ -25,7 +25,19 @@ def median_filter(data,cycles = 1):
         for p0,p1,p2 in zip(data_0,data_1,data_2):
             new_data.append(np.median([p0,p1,p2]))
         new_data.append(p2)
-    return new_data
+    return np.array(new_data)
+
+def rolling_median_filter(data,cycles = 1,forwards=True,backwards=False):
+    index_list = list(range(1,len(data)-1))
+    for i in range(cycles):
+        if forwards:
+            for index in index_list:
+                data[index]=np.median([data[index-1],data[index],data[index+1]])
+        if backwards:
+            index_list.reverse()
+            for index in index_list:
+                data[index]=np.median([data[index-1],data[index],data[index+1]])
+    return data
 
 def high_pass_filter(data1D,cut,soft,damp=1e-6):
     filter_mask = fermi(np.arange(0,len(data1D),1),cut,soft)+np.flip(fermi(np.arange(0,len(data1D),1),cut-1,soft,offset=damp))
