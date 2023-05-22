@@ -119,7 +119,6 @@ class EIS_data(object):
     
     def Nyquist(self,color='k',freq_annotation=False,R_annotation=False,legend=False,subfigure=False):
         figure = EIS_figure()
-        figure.plot(self.data,freq_annotation=freq_annotation,color=color)
         if R_annotation:
             Rs = self.find_Rs()
             Rtot = self.find_Rtot()
@@ -129,6 +128,18 @@ class EIS_data(object):
             else:
                 figure.ax.plot(Rs[0],self.Imag[Rs[1]],'s',color=color)
                 figure.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',color=color)
+        figure.plot(self.data,freq_annotation=freq_annotation,color=color)
         figure.draw()
 
-
+    def Nyquist_curve(self,EIS_fig,color='k',label='',freq_annotation=False,R_annotation=False,legend=False):
+        if R_annotation:
+            Rs = self.find_Rs()
+            Rtot = self.find_Rtot()
+            if legend:
+                EIS_fig.ax.plot(Rs[0],self.Imag[Rs[1]],'s',label='Rs',color=color)
+                EIS_fig.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',label='Rtot',color=color)
+            else:
+                EIS_fig.ax.plot(Rs[0],self.Imag[Rs[1]],'s',color=color)
+                EIS_fig.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',color=color)
+        EIS_fig.plot(self.data,freq_annotation=freq_annotation,color=color,label=label)
+        return EIS_fig
