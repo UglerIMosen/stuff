@@ -151,7 +151,7 @@ def read_SAC(filename, MassNumbers = np.array([-1])):
     f.close()
     return data_cycle, Time, u, time_cycle, Start_time
 
-def read_RGA_prism_dat(path):
+def read_RGA_prism_dat(path,mass_name = '_amu'):
     #TAkes a data-file, read the lines, split the lines in '\t', and makes a differential analysis on, when the data starts. It reads the first line as names, and the rest as the data.
     file=open(path,'r')
     lines=file.readlines()
@@ -167,7 +167,49 @@ def read_RGA_prism_dat(path):
                 data_dict[key].append(float(value))
             except:
                 data_dict[key].append(value)
+    name_keys = [i for i in data_dict.keys() if '_amu' in i]
+    for key in name_keys:
+        mass = int(re.search(r'\d+',key).group())
+        data_dict[mass] = data_dict[key]
     return data_dict
+
+def mass_library(compound):
+    # Collection (C) 2014 copyright by the U.S. Secretary of Commerce
+    # on behalf of the United States of America. All rights reserved.
+    dictionary = {
+        'Ar'  : {20:0.1462, 36:0.0030, 38:0.0005, 40:1.0000},
+        'CH4' : {12:0.0380, 13:0.1069, 14:0.2042, 15:0.8879, 16:1.0000, 17:0.0164},
+        'CO'  : {12:0.0470, 16:0.0170, 28:1.0000, 29:0.0120},
+        'CO2' : {12:0.0871, 16:0.0961, 22:0.0190, 28:0.0981, 29:0.0010, 44:1.0000, 45:0.0120, 46:0.0040},
+        'H2'  : { 1:0.0210,  2:1.0000},
+        'H2O' : {16:0.0090, 17:0.2122, 18:1.0000, 19:0.0050, 20:0.0030},
+        'N2'  : {14:0.1379, 28:1.0000, 29:0.0074},
+        'O2'  : {16:0.2180, 32:1.0000},
+    }
+    
+    #calculated mixes
+    air = {28:1, 32:0.2085, 40:0.0094}
+    dictionary['Air'] = {}
+    for mass,gas in zip(air.keys(),['N2','O2','Ar']):
+        for mass2 in dictionary[gas].keys():
+            if mass2 in dictionary['Air'].keys():
+                dictionary['Air'][mass2] += dictionary[gas][mass2]*air[mass]
+            else:
+                dictionary['Air'][mass2] = dictionary[gas][mass2]*air[mass]
+
+    return dictionary[compound]
+
+def correct_air(data,massname='_amu',correcting_mass=40,minimum_threshold = 1e-15):
+    # correcting mass spectrum for air-leakage, usually acoording to the argon partial pressure
+    corrected_data = data
+    if correcting_mass not in mass_library('Air').keys():
+        raise ValueError('Correcting mass not present in air mass spectrum')
+        return corrected_data
+    argon_current = data[str(correcting_mass)+massname]
+    for mass in mass_library('Air').keys():
+        corrected_data[mass]=np.array(data[mass])-np.array(data[correcting_mass])*mass_library('Air')[mass]/mass_library('Air')[40]
+        corrected_data[mass] = [i if i > minimum_threshold else minimum_threshold for i in corrected_data[mass]]
+    return corrected_data
 
 if __name__ == '__main__':
     file = find_file()
