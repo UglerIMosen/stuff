@@ -171,6 +171,8 @@ def read_RGA_prism_dat(path,mass_name = '_amu'):
     for key in name_keys:
         mass = int(re.search(r'\d+',key).group())
         data_dict[mass] = data_dict[key]
+    for key in data_dict.keys():
+        data_dict[key] = np.array(data_dict[key])
     return data_dict
 
 def mass_library(compound):
@@ -199,18 +201,27 @@ def mass_library(compound):
 
     return dictionary[compound]
 
-def correct_air(data,massname='_amu',correcting_mass=40,minimum_threshold = 1e-15):
+def correct_air(raw_data,massname='_amu',correcting_mass=40,minimum_threshold = 1e-15):
     # correcting mass spectrum for air-leakage, usually acoording to the argon partial pressure
-    corrected_data = data
+    corrected_data = raw_data.copy()
     if correcting_mass not in mass_library('Air').keys():
         raise ValueError('Correcting mass not present in air mass spectrum')
         return corrected_data
-    argon_current = data[str(correcting_mass)+massname]
+    if 'Air corrected' in corrected_data.keys():
+        if corrected_data['Air corrected'] == True:
+            print('Already air corrected')
+            return corrected_data
+    argon_current = raw_data[correcting_mass]
     for mass in mass_library('Air').keys():
-        corrected_data[mass]=np.array(data[mass])-np.array(data[correcting_mass])*mass_library('Air')[mass]/mass_library('Air')[40]
-        corrected_data[mass] = [i if i > minimum_threshold else minimum_threshold for i in corrected_data[mass]]
+        corrected_data[mass] = np.array(raw_data[mass])-np.array(raw_data[correcting_mass])*mass_library('Air')[mass]/mass_library('Air')[40]
+        if mass != correcting_mass:
+            corrected_data[mass] = [i if i > minimum_threshold else minimum_threshold for i in corrected_data[mass]]
+    corrected_data['Air corrected'] = True
     return corrected_data
 
+def simple_gas_fit(raw_data,):
+    pass
+    
 if __name__ == '__main__':
     file = find_file()
     masses = [1.41, 2.38, 4, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 26, 28, 29, 30, 32, 36, 40, 44, 46]
