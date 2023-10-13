@@ -42,7 +42,7 @@ class EIS_figure(object):
         ax.legend()#frameon=0,ncol=1)                
         return figure, ax
         
-    def plot(self, data_set, label='',color='k',freq_annotation=False):
+    def plot(self, data_set, label='',color='k',freq_annotation=False,linestyle='-'):
         for key in data_set.keys():
             if 'R' in key:
                 R_key = key
@@ -51,7 +51,7 @@ class EIS_figure(object):
             if 'I' in key:
                 I_key = key
         
-        self.ax.plot(data_set[R_key],data_set[I_key],color=color,label=label)
+        self.ax.plot(data_set[R_key],data_set[I_key],color=color,label=label,linestyle=linestyle)
         if freq_annotation:
             potens = 0.001
             for F in data_set[F_key]:
@@ -101,6 +101,7 @@ class EIS_data(object):
             if sign*np.diff(self.Imag)[-i] < 0:
                 break
         i = i-1
+        
         lower_limit = min(self.Imag[0:-i])
         upper_limit = max(self.Imag[0:-i])
         if upper_limit < 0:
@@ -131,7 +132,7 @@ class EIS_data(object):
         figure.plot(self.data,freq_annotation=freq_annotation,color=color)
         figure.draw()
 
-    def Nyquist_curve(self,EIS_fig,color='k',label='',freq_annotation=False,R_annotation=False,legend=False):
+    def Nyquist_curve(self,EIS_fig,color='k',label='',freq_annotation=False,R_annotation=False,legend=False,linestyle='-'):
         if R_annotation:
             Rs = self.find_Rs()
             Rtot = self.find_Rtot()
@@ -141,5 +142,5 @@ class EIS_data(object):
             else:
                 EIS_fig.ax.plot(Rs[0],self.Imag[Rs[1]],'s',color=color)
                 EIS_fig.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',color=color)
-        EIS_fig.plot(self.data,freq_annotation=freq_annotation,color=color,label=label)
+        EIS_fig.plot(self.data,freq_annotation=freq_annotation,color=color,label=label,linestyle=linestyle)
         return EIS_fig
