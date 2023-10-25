@@ -10,6 +10,11 @@ from tkinter import ttk
 from tkinter import filedialog
 import sys
 import time
+from scipy.optimize import curve_fit
+from matplotlib import pyplot as plt
+import pandas as pd
+
+from stuff.common.stuff import progress_bar, time_stamp_str, name_of_file
 
 def find_file(): 
     root = tk.Tk()
@@ -179,14 +184,20 @@ def mass_library(compound):
     # Collection (C) 2014 copyright by the U.S. Secretary of Commerce
     # on behalf of the United States of America. All rights reserved.
     dictionary = {
-        'Ar'  : {20:0.1462, 36:0.0030, 38:0.0005, 40:1.0000},
-        'CH4' : {12:0.0380, 13:0.1069, 14:0.2042, 15:0.8879, 16:1.0000, 17:0.0164},
-        'CO'  : {12:0.0470, 16:0.0170, 28:1.0000, 29:0.0120},
-        'CO2' : {12:0.0871, 16:0.0961, 22:0.0190, 28:0.0981, 29:0.0010, 44:1.0000, 45:0.0120, 46:0.0040},
-        'H2'  : { 1:0.0210,  2:1.0000},
-        'H2O' : {16:0.0090, 17:0.2122, 18:1.0000, 19:0.0050, 20:0.0030},
-        'N2'  : {14:0.1379, 28:1.0000, 29:0.0074},
-        'O2'  : {16:0.2180, 32:1.0000},
+        'H2'  : { 1:0.0210,  2:0.9999},
+        'H2O' : {16:0.0090, 17:0.2122, 18:0.9999, 19:0.0050, 20:0.0030},
+        'He'  : { 4:0.9999},
+        'C'   : {12:0.9999},
+        'CH4' : {12:0.0380, 13:0.1069, 14:0.2042, 15:0.8879, 16:0.9999, 17:0.0164},
+        'CO'  : {12:0.0470, 16:0.0170, 28:0.9999, 29:0.0120},
+        'CO2' : {12:0.0871, 16:0.0961, 22:0.0190, 28:0.0981, 29:0.0010, 44:0.9999, 45:0.0120, 46:0.0040},
+        'N2'  : {14:0.1379, 28:0.9999, 29:0.0074},
+        'NO'  : {14:0.0751, 15:0.0240, 16:0.0150, 30:0.9999, 31:0.0040, 32:0.0020},
+        'N2O' : {14:0.1291, 15:0.0010, 16:0.0500, 28:0.1081, 29:0.0010, 30:0.3113, 31:0.0010, 44:0.9999, 45:0.0070},
+        'NO2' : {14:0.0961, 16:0.2232, 30:0.9999, 46:0.3703, 47:0.0010},
+        'O'   : {16:0.9999},
+        'O2'  : {16:0.2180, 32:0.9999},
+        'Ar'  : {20:0.1462, 36:0.0030, 38:0.0005, 40:0.9999},
     }
     
     #calculated mixes
@@ -219,9 +230,195 @@ def correct_air(raw_data,massname='_amu',correcting_mass=40,minimum_threshold = 
     corrected_data['Air corrected'] = True
     return corrected_data
 
-def simple_gas_fit(raw_data,):
-    pass
+class spectrum_fit(object):
+    # this function can fit NIST mass spectra to 
+
+    def __init__(self, ascii_data_set_path, 
+                       gasses=['Ar', 'CH4', 'CO', 'CO2', 'H2', 'H2O', 'N2', 'O2', 'O'], 
+                       masses_to_skip=None,
+                       pressure_normalization=False,
+                       mass_name = '_amu'):
+        
+        self.data_set = read_RGA_prism_dat(ascii_data_set_path,mass_name = mass_name)
+        self.data_path = ascii_data_set_path
+        self.gas_list = gasses
+        self.mlib = mass_library
+        if 'Pressure_(mBar)' in self.data_set.keys() and pressure_normalization:
+            self.pressure_normalization = pressure_normalization
+        elif pressure_normalization:
+            print('Cannot find any pressure data')
+            self.pressure_normalization = False
+        else:
+            self.pressure_normalization = False
+        
+        self.skip = []
+        if type(masses_to_skip) in [list,tuple,np.ndarray]:
+            for mass in masses_to_skip:
+                self.skip.append(mass)
+        elif type(masses_to_skip) in [int,float]:
+            self.skip.append(masses_to_skip)
+        elif masses_to_skip == None:
+            self.skip = []
+        else:
+            raise TypeError('"masses_to_skip" must be of type: list, tuple, np.ndarray, int, float, NoneType')
+            print('I mean... there is plenty to choose...')
+        
+        self.set_max_mass()
+        self.generate_gas_mass_list()
+
+    def retrieve_spectrum(self,row,data=None):
+        # retrieve a single spectrum from the ascii time qms-data
+        
+        if data == None:
+            data = self.data_set
+        
+        masses = [i for i in data.keys() if isinstance(i,int)]
+        spectrum = []
+        if 'Pressure_(mBar)' in data.keys() and self.pressure_normalization:
+            for mass in masses:
+                spectrum.append(data[mass][row]/data['Pressure_(mBar)'][row])
+        else:
+            for mass in masses:
+                spectrum.append(data[mass][row])
+        return [masses, spectrum]
+
+    def set_max_mass(self):
+        # finds maximum atomic mass present in the time-data
+        
+        spectrum = self.retrieve_spectrum(0)
+        self.max_mass = max(spectrum[0])
+        return self.max_mass
+
+    def generate_gas_mass_list(self):
+        #generate the list of atomic masses that will be fitted
+        
+        self.gas_masses = []
+        for gas in self.gas_list:
+            for key in self.mlib(gas).keys():
+                if key not in self.gas_masses and key < self.max_mass and key not in self.skip:
+                    self.gas_masses.append(key)
+        self.gas_masses.sort()
+        return self.gas_masses
     
+    def add_gas(self,gas):
+        self.gas_list.append(gas)
+        self.generate_gas_mass_list()
+        return self.gas_list
+
+    def remove_gas(self,gas):
+        self.gas_list.remove(gas)
+        self.generate_gas_mass_list()
+        return self.gas_list
+    
+    def generated_mass_spectrum(self,mass_list,*gas_amplitudes,gas_list=None):
+        # generate a mass spectrum from amplitudes of the gasses
+
+        if gas_list == None:
+            gas_list = self.gas_list
+
+        trial_currents = list(np.zeros(len(mass_list)))
+        for mass in mass_list:
+            for gas,gas_amp in zip(gas_list,gas_amplitudes):
+                if mass in self.mlib(gas):
+                    trial_currents[list(mass_list).index(mass)] += gas_amp*self.mlib(gas)[mass]
+        return trial_currents
+    
+    def fit_gas_spectrum(self,spectrum,plot=False,plot_show=True):
+        # fit gas amplitudes to a qms spectrum
+
+        currents = []        
+        for mass in self.gas_masses:
+            currents.append(spectrum[1][spectrum[0].index(mass)])
+        
+        gas_amplitudes = []
+        for gas in self.gas_list:
+            primary_mass = max([(amplitude,mass) for mass, amplitude in self.mlib(gas).items()])
+            if gas == 'CH4':
+                #avoid mass 16
+                gas_amplitudes.append(currents[self.gas_masses.index(15)]/self.mlib(gas)[15])
+            elif gas == 'CO' and 'N2' in self.gas_list:
+                gas_amplitudes.append(abs(currents[self.gas_masses.index(28)]-currents[self.gas_masses.index(14)]/self.mlib('N2')[14]))
+            elif gas == 'N2' and 'CO' in self.gas_list:
+                gas_amplitudes.append(currents[self.gas_masses.index(14)]/self.mlib(gas)[14])
+            elif primary_mass not in self.skip:
+                gas_amplitudes.append(currents[self.gas_masses.index(primary_mass[1])])
+            else:
+                gas_amplitudes.append(np.mean(currents))
+        
+        def func(x_data,*args):
+            errorfunc = (np.array(self.generated_mass_spectrum(x_data,*args))-np.array(currents))/max(currents)
+            return [abs(i) if i<0 else i*25 for i in errorfunc]
+        
+        fit = curve_fit(func,self.gas_masses,np.zeros(len(currents)),p0=gas_amplitudes,bounds=(0.0,np.inf))
+        
+        if plot:
+            fig, f = plt.subplots()
+            
+            
+            f.plot([spectrum[0][0]-0.5,*sum([[i,i+0.5] for i in spectrum[0]],[])],[*sum([[0,i] for i in spectrum[1]],[]),0],linestyle=':',label='Raw spectrum')
+            f.plot(self.gas_masses,currents,'o',color='tab:blue',label='Data')
+            f.plot(self.gas_masses,self.generated_mass_spectrum(self.gas_masses,*fit[0]),'*',color='tab:orange',label='Best fit to data')
+            
+            f.legend()
+            f.set_xlabel('atomic mass')
+            if self.pressure_normalization:
+                f.set_ylabel('Detector current [A/mbar]')
+            else:
+                f.set_ylabel('Detector current [A]')
+            
+            if plot_show:
+                plt.show()
+            else:
+                plt.draw()
+        
+        return fit
+        
+    def fit_time_data(self,echo=True):
+
+        self.gas_currents = {}
+        
+        if self.pressure_normalization:
+            unit = '_(A/mbar)'
+        else:
+            unit = '_(A)'
+                    
+        for gas in self.gas_list:
+            self.data_set[gas+unit] = []
+            self.gas_currents[gas+unit] = []
+
+        self.gas_currents['reltime_(s)'] = self.data_set['Time Relative (sec)']
+        self.gas_currents['abstime'] = self.data_set['Time Absolute (UTC)']
+        self.gas_currents['datetime'] = self.data_set['Time Absolute (Date_Time)']
+            
+        print('\n')
+        for indexation in range(len(self.data_set[list(self.data_set.keys())[0]])):
+            
+            fit = self.fit_gas_spectrum(self.retrieve_spectrum(indexation))
+            
+            for gas,fit_result in zip(self.gas_list,fit[0]):
+                self.data_set[gas+unit].append(fit_result)
+                self.gas_currents[gas+unit].append(fit_result)
+                
+            print(progress_bar(indexation/(len(self.data_set[list(self.data_set.keys())[0]])-1))+' '+str(indexation)+' out of '+str((len(self.data_set[list(self.data_set.keys())[0]])-1)),end='\r')
+
+        print('\n')
+
+        return self.data_set, self.gas_currents
+    
+    def write_to_file(self,file_format):
+        if file_format not in ['.csv','csv','excel','xlsx','.xlsx']:
+            raise TypeError('Not valid file format')
+    
+        df = pd.DataFrame(data=self.data_set)
+        gdf = pd.DataFrame(data=self.gas_currents)
+        
+        if file_format in ['.csv','csv']:
+            df.to_csv(name_of_file(self.data_path)+'_all.csv')
+            gdf.to_csv(name_of_file(self.data_path)+'_gasfit.csv')
+        elif file_format in ['excel','xlsx','.xlsx']:
+            df.to_excel(name_of_file(self.data_path)+'_all.xlsx')
+            gdf.to_excel(name_of_file(self.data_path)+'_gasfit.xlsx')
+
 if __name__ == '__main__':
     file = find_file()
     masses = [1.41, 2.38, 4, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 26, 28, 29, 30, 32, 36, 40, 44, 46]

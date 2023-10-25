@@ -34,3 +34,21 @@ def name_of_file(file_name):
     else:
         return file_name[:-(comma_index+1)]
     
+def time_stamp_str():
+    return datetime.now().strftime("%Y%d%m_%H%M%S")
+    
+def progress_bar(ratio,length=18,start_str='[',end_str=']',progress_str='=',empty_str=' ',percentages=True):
+    if length < 5:
+        length=5
+    if ratio < 0:
+        ratio = 0 
+    elif ratio > 1:
+        ratio = 1
+    if ratio == 0.5:
+        ratio = 0.501
+    prt_str = start_str+round(ratio*length)*progress_str
+    prt_str = prt_str+(1+length-len(prt_str))*empty_str+end_str
+    if percentages:
+        perc_str = str(round(ratio*100))+'%'
+        prt_str = prt_str[0:int(length/2)-1]+perc_str+prt_str[int(length/2)+len(perc_str)-1:]
+    return(prt_str)
