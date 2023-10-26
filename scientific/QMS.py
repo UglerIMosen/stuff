@@ -199,7 +199,10 @@ def mass_library(compound):
             else:
                 dictionary['Air'][mass2] = dictionary[gas][mass2]*air[mass]
 
-    return dictionary[compound]
+    if compound == 'content':
+        return list(dictionary.keys())
+    else:
+        return dictionary[compound]
 
 def correct_air(raw_data,massname='_amu',correcting_mass=40,minimum_threshold = 1e-15):
     # correcting mass spectrum for air-leakage, usually acoording to the argon partial pressure
