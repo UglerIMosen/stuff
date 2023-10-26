@@ -237,7 +237,8 @@ class spectrum_fit(object):
     # this function can fit NIST mass spectra to 
 
     def __init__(self, ascii_data_set_path, 
-                       gasses=['Ar', 'CH4', 'CO', 'CO2', 'H2', 'H2O', 'N2', 'O2', 'O'], 
+                       run_sequence = True,
+                       gasses=['H2O','CO','CO2','CH4','O2','N2','H2','Ar'], 
                        masses_to_skip=None,
                        pressure_normalization=False,
                        mass_name = '_amu'):
@@ -268,6 +269,9 @@ class spectrum_fit(object):
         
         self.set_max_mass()
         self.generate_gas_mass_list()
+
+        if run_sequence:
+            self.run_sequence()
 
     def retrieve_spectrum(self,row,data=None):
         # retrieve a single spectrum from the ascii time qms-data
@@ -417,15 +421,30 @@ class spectrum_fit(object):
         tss = time_stamp_str()
         
         if file_format in ['.csv','csv']:
-            df.to_csv(tss+name_of_file(self.data_path)+'_all.csv')
+            df.to_csv(tss+'_'+name_of_file(self.data_path)+'_all.csv')
             print('Wrote to file: '+tss+name_of_file(self.data_path)+'_all.csv')
-            gdf.to_csv(tss+name_of_file(self.data_path)+'_gasfit.csv')
+            gdf.to_csv(tss+'_'+name_of_file(self.data_path)+'_gasfit.csv')
             print('Wrote to file: '+tss+name_of_file(self.data_path)+'_gasfit.csv')
         elif file_format in ['excel','xlsx','.xlsx']:
-            df.to_excel(tss+name_of_file(self.data_path)+'_all.xlsx')
+            df.to_excel(tss+'_'+name_of_file(self.data_path)+'_all.xlsx')
             print('Wrote to file: '+tss+name_of_file(self.data_path)+'_all.xlsx')
-            gdf.to_excel(tss+name_of_file(self.data_path)+'_gasfit.xlsx')
+            gdf.to_excel(tss+'_'+name_of_file(self.data_path)+'_gasfit.xlsx')
             print('Wrote to file: '+tss+name_of_file(self.data_path)+'_gasfit.xlsx')
+
+    def run_sequence(self):
+        
+        print('\n>>> Running QMS fit on file: '+self.data_path)
+                
+        qms_data,qms_gas_data = self.fit_time_data()
+        
+        print('Finished fitting')
+        
+        self.write_to_file('csv')
+        self.write_to_file('excel')
+
+        print('Finished program')
+        
+        return qms_data, qms_gas_data
 
 if __name__ == '__main__':
     file = find_file()
