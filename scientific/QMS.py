@@ -242,6 +242,14 @@ class spectrum_fit(object):
                        masses_to_skip=None,
                        pressure_normalization=False,
                        mass_name = '_amu'):
+
+        self.gas_calibration = {#(a,b,std) in concentration=a qms_current*b
+                                'CH4' : (5629,-0.117,0.04), #R2: 0.9466
+                                'CO'  : (3812,-0.040,0.04), #R2: 0.9184
+                                'CO2' : (6350,-0.065,0.01), #R2: 0.9466
+                                'H2'  : ( 528, 0.176,0.01), #R2: 0.9086
+                                'N2'  : (4070,-0.065,0.03), #R2: 0.9826
+                                }
         
         self.data_set = read_RGA_prism_dat(ascii_data_set_path,mass_name = mass_name)
         self.data_path = ascii_data_set_path
@@ -344,9 +352,9 @@ class spectrum_fit(object):
                 #avoid mass 16
                 gas_amplitudes.append(currents[self.gas_masses.index(15)]/self.mlib(gas)[15])
             elif gas == 'CO' and 'N2' in self.gas_list:
-                gas_amplitudes.append(abs(currents[self.gas_masses.index(28)]-currents[self.gas_masses.index(14)]/self.mlib('N2')[14]))
+                gas_amplitudes.append(abs(currents[self.gas_masses.index(28)]-0.8*currents[self.gas_masses.index(14)]/self.mlib('N2')[14]))
             elif gas == 'N2' and 'CO' in self.gas_list:
-                gas_amplitudes.append(currents[self.gas_masses.index(14)]/self.mlib(gas)[14])
+                gas_amplitudes.append(0.8*currents[self.gas_masses.index(14)]/self.mlib(gas)[14])
             elif primary_mass not in self.skip:
                 gas_amplitudes.append(currents[self.gas_masses.index(primary_mass[1])])
             else:
@@ -412,13 +420,33 @@ class spectrum_fit(object):
 
         return self.data_set, self.gas_currents
     
-    def write_to_file(self,file_format):
+    def calibrate_currents(self):
+        if self.pressure_normalization:
+            print('\nCalibrating gas concentration\n')
+            for gas in self.gas_list:
+                if gas in self.gas_calibration:
+                    print('Calibration: '+gas)
+                    self.gas_currents[gas+'_(%)'] = list(100*self.gas_calibration[gas][0]*np.array(self.gas_currents[gas+'_(A/mbar)'])+self.gas_calibration[gas][1])
+                    self.gas_currents[gas+'_(std)'] = list(np.array(self.gas_currents[gas+'_(A/mbar)'])*self.gas_calibration[gas][2])
+                    print('    - average '+gas+': '+str(round(np.mean(self.gas_currents[gas+'_(%)']),1))+'%')
+                else:
+                    print('Could not calibrate: '+gas)
+                    print('    - missing calibration')
+            print('Calibration done\n')
+        else:
+            print('No pressure normalisation. Cannot calibrate gas concentration\n')
+        return self.gas_currents
+                    
+    def write_to_file(self,file_format,timestamp = None):
         if file_format not in ['.csv','csv','excel','xlsx','.xlsx']:
             raise TypeError('Not valid file format')
     
         df = pd.DataFrame(data=self.data_set)
         gdf = pd.DataFrame(data=self.gas_currents)
-        tss = time_stamp_str()
+        if timestamp == None:
+            tss = time_stamp_str()
+        else:
+            tss = timestamp
         
         if file_format in ['.csv','csv']:
             df.to_csv(tss+'_'+name_of_file(self.data_path)+'_all.csv')
@@ -434,13 +462,17 @@ class spectrum_fit(object):
     def run_sequence(self):
         
         print('\n>>> Running QMS fit on file: '+self.data_path)
-                
+        timestamp = time_stamp_str()
+        print('    - '+timestamp)
+        
         qms_data,qms_gas_data = self.fit_time_data()
         
         print('Finished fitting')
         
-        self.write_to_file('csv')
-        self.write_to_file('excel')
+        self.calibrate_currents()
+        
+        self.write_to_file('csv',timestamp=timestamp)
+        self.write_to_file('excel',timestamp=timestamp)
 
         print('Finished program')
         
@@ -472,14 +504,4 @@ if __name__ == '__main__':
         output_file.close()
         print(' ')
         print('Job finished')
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
