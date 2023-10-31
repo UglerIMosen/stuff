@@ -12,35 +12,47 @@ def rsqr(ydat,model_dat):
     return 1-sum((np.array(ydat)-np.array(model_dat))**2)/sum((np.array(ydat)-np.mean(ydat))**2)
 
 
-def linear_fit_plot(datx,daty,plotshow=True,title=None,intercept_zero=False):
-    if intercept_zero:
+def linear_fit_plot(datx,daty,plotshow=True,title=None,intercept=True):
+    if not intercept or intercept == 0:
         def func(x,a):
             return a*x
-        res = curve_fit(f,datx,daty)
+        res = curve_fit(func,datx,daty)
         slope = res[0][0]
-        s_std = np.sqrt(res[1][0])
+        s_std = np.sqrt(res[1][0][0])
         intercept = 0
         i_std = 0
-        r2 = rsqr(daty,np.array(datx)*slope+intercept)        
+        r2 = rsqr(daty,np.array(datx)*slope+intercept)
+    elif type(intercept) in [int,float]:
+        def func(x,a):
+            return a*x+intercept
+        res = curve_fit(func,datx,daty)
+        slope = res[0][0]
+        s_std = np.sqrt(res[1][0][0])
+        intercept = intercept
+        i_std = 0
+        r2 = rsqr(daty,np.array(datx)*slope+intercept)
     else:
         res = linregress(datx,daty)
         slope = res.slope
         s_std = res.stderr
         intercept = res.intercept
         i_std = res.intercept_stderr
-        r2 = r_squared(daty,np.array(datx)*slope+intercept)
+        r2 = rsqr(daty,np.array(datx)*slope+intercept)
+        
+    print('slope',slope)
+    print('    +-',s_std)
+    print('intercept',intercept)
+    print('    +-',i_std)
+    print('R2',r2)
         
     fig, f = plt.subplots()
     f.plot(datx,daty,'o',label='data')
-    f.plot(datx,np.array(datx)*slope+intercept,label=r'fit: $y = ax+b$')
+    f.plot([0,*datx],[intercept,*np.array(datx)*slope+intercept],label=r'fit: $y = ax+b$')
     
     f.set_xlabel('Xdata')
     f.set_ylabel('Ydata')
     
-    f.legend(title='$a$: '+str(round(slope,4))+'$\pm$'+str(round(s_std,4))+
-                  '\n$b$: '+str(round(intercept,4))+'$\pm$'+str(round(i_std,4))+
-                '\n$R^2$: '+str(round(r2,4))
-            ) 
+    f.legend(title='$a$: '+str(round(slope,4))+'$\pm$'+str(round(s_std,4))+'\n$b$: '+str(round(intercept,4))+'$\pm$'+str(round(i_std,4))+'\n$R^2$: '+str(round(r2,4))) 
     if type(title) == str:
         f.set_title(title)
     

@@ -426,8 +426,8 @@ class spectrum_fit(object):
             for gas in self.gas_list:
                 if gas in self.gas_calibration:
                     print('Calibration: '+gas)
-                    self.gas_currents[gas+'_(%)'] = list(100*self.gas_calibration[gas][0]*np.array(self.gas_currents[gas+'_(A/mbar)'])+self.gas_calibration[gas][1])
-                    self.gas_currents[gas+'_(std)'] = list(np.array(self.gas_currents[gas+'_(A/mbar)'])*self.gas_calibration[gas][2])
+                    self.gas_currents[gas+'_(%)'] = list(np.clip(100*self.gas_calibration[gas][0]*np.array(self.gas_currents[gas+'_(A/mbar)'])+self.gas_calibration[gas][1],0,100))
+                    self.gas_currents[gas+'_(std)'] = list(np.array(self.gas_currents[gas+'_(%)'])*self.gas_calibration[gas][2])
                     print('    - average '+gas+': '+str(round(np.mean(self.gas_currents[gas+'_(%)']),1))+'%')
                 else:
                     print('Could not calibrate: '+gas)
