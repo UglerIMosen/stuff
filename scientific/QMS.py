@@ -13,6 +13,7 @@ import time
 from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt
 import pandas as pd
+import os
 
 from stuff.common.stuff import progress_bar, time_stamp_str, name_of_file
 
@@ -236,32 +237,29 @@ def correct_air(raw_data,massname='_amu',correcting_mass=40,minimum_threshold = 
 class spectrum_fit(object):
     # this function can fit NIST mass spectra to 
 
-    def __init__(self, ascii_data_set_path, 
-                       run_sequence = True,
+    def __init__(self, ascii_data_set_path=None, 
+                       run_sequence = False,
                        gasses=['H2O','CO','CO2','CH4','O2','N2','H2','Ar'], 
                        masses_to_skip=None,
-                       pressure_normalization=False,
+                       pressure_normalization=True,
                        mass_name = '_amu'):
 
-        self.gas_calibration = {#(a,b,std) in concentration=a qms_current*b
-                                'CH4' : (5629,-0.117,0.04), #R2: 0.9466
-                                'CO'  : (3812,-0.040,0.04), #R2: 0.9184
-                                'CO2' : (6350,-0.065,0.01), #R2: 0.9466
-                                'H2'  : ( 528, 0.176,0.01), #R2: 0.9086
-                                'N2'  : (4070,-0.065,0.03), #R2: 0.9826
+        self.gas_calibration = {#(a,b), fitted as y=ax+b, used as y=ax, error is y*b. 
+                                'CH4' : (5629,-0.117), #R2: 0.9466, 
+                                'CO'  : (3812,-0.040), #R2: 0.9184
+                                'CO2' : (6350,-0.065), #R2: 0.9466
+                                'H2'  : ( 528, 0.176), #R2: 0.9086
+                                'N2'  : (4070,-0.065), #R2: 0.9826
                                 }
         
-        self.data_set = read_RGA_prism_dat(ascii_data_set_path,mass_name = mass_name)
-        self.data_path = ascii_data_set_path
+        if type(ascii_data_set_path) == str:
+            load_data(pressure_normalization=pressure_normalization)
+        else:
+            self.data_present = False
+        self.fit_complete = False
+        
         self.gas_list = gasses
         self.mlib = mass_library
-        if 'Pressure_(mBar)' in self.data_set.keys() and pressure_normalization:
-            self.pressure_normalization = pressure_normalization
-        elif pressure_normalization:
-            print('Cannot find any pressure data')
-            self.pressure_normalization = False
-        else:
-            self.pressure_normalization = False
         
         self.skip = []
         if type(masses_to_skip) in [list,tuple,np.ndarray]:
@@ -275,14 +273,31 @@ class spectrum_fit(object):
             raise TypeError('"masses_to_skip" must be of type: list, tuple, np.ndarray, int, float, NoneType')
             print('I mean... there is plenty to choose...')
         
-        self.set_max_mass()
-        self.generate_gas_mass_list()
-
         if run_sequence:
             self.run_sequence()
 
+    def load_data(self,path,mass_name='_amu',pressure_normalization=True):
+        
+        self.data_set = read_RGA_prism_dat(path,mass_name = mass_name)
+        self.data_path = path
+        self.data_present = True
+        
+        if 'Pressure_(mBar)' in self.data_set.keys() and pressure_normalization:
+            self.pressure_normalization = pressure_normalization
+        elif pressure_normalization:
+            print('Cannot find any pressure data')
+            self.pressure_normalization = False
+        else:
+            self.pressure_normalization = False
+
+        self.set_max_mass()
+        self.generate_gas_mass_list()
+
     def retrieve_spectrum(self,row,data=None):
         # retrieve a single spectrum from the ascii time qms-data
+
+        if not self.data_present:
+            self.load_data(find_file())
         
         if data == None:
             data = self.data_set
@@ -298,6 +313,9 @@ class spectrum_fit(object):
         return [masses, spectrum]
 
     def set_max_mass(self):
+        if not self.data_present:
+            self.load_data(find_file())
+        
         # finds maximum atomic mass present in the time-data
         
         spectrum = self.retrieve_spectrum(0)
@@ -305,6 +323,9 @@ class spectrum_fit(object):
         return self.max_mass
 
     def generate_gas_mass_list(self):
+        if not self.data_present:
+            self.load_data(find_file())
+
         #generate the list of atomic masses that will be fitted
         
         self.gas_masses = []
@@ -389,6 +410,8 @@ class spectrum_fit(object):
         return fit
         
     def fit_time_data(self,echo=True):
+        if not self.data_present:
+            self.load_data(find_file())
 
         self.gas_currents = {}
         
@@ -417,17 +440,22 @@ class spectrum_fit(object):
             print(progress_bar(indexation/(len(self.data_set[list(self.data_set.keys())[0]])-1))+' '+str(indexation)+' out of '+str((len(self.data_set[list(self.data_set.keys())[0]])-1)),end='\r')
 
         print('\n')
+        
+        self.fit_complete = True
 
         return self.data_set, self.gas_currents
     
     def calibrate_currents(self):
+        if not self.fit_complete:
+            self.fit_time_data()
+            
         if self.pressure_normalization:
             print('\nCalibrating gas concentration\n')
             for gas in self.gas_list:
                 if gas in self.gas_calibration:
                     print('Calibration: '+gas)
-                    self.gas_currents[gas+'_(%)'] = list(np.clip(100*self.gas_calibration[gas][0]*np.array(self.gas_currents[gas+'_(A/mbar)'])+self.gas_calibration[gas][1],0,100))
-                    self.gas_currents[gas+'_(std)'] = list(np.array(self.gas_currents[gas+'_(%)'])*self.gas_calibration[gas][2])
+                    self.gas_currents[gas+'_(%)'] = list(np.clip(100*self.gas_calibration[gas][0]*np.array(self.gas_currents[gas+'_(A/mbar)']),0,100))
+                    self.gas_currents[gas+'_(std)'] = list(np.array(self.gas_currents[gas+'_(%)'])*abs(self.gas_calibration[gas][1]))
                     print('    - average '+gas+': '+str(round(np.mean(self.gas_currents[gas+'_(%)']),1))+'%')
                 else:
                     print('Could not calibrate: '+gas)
@@ -437,7 +465,10 @@ class spectrum_fit(object):
             print('No pressure normalisation. Cannot calibrate gas concentration\n')
         return self.gas_currents
                     
-    def write_to_file(self,file_format,timestamp = None):
+    def write_to_file(self,file_format,timestamp = None,data_folder=None):
+        if not self.fit_complete:
+            self.fit_time_data()
+
         if file_format not in ['.csv','csv','excel','xlsx','.xlsx']:
             raise TypeError('Not valid file format')
     
@@ -448,31 +479,39 @@ class spectrum_fit(object):
         else:
             tss = timestamp
         
+        if data_folder == None:
+            to_path = self.data_path[::-1].split('/',1)[-1][::-1]+'/'+tss+'_'+name_of_file(self.data_path)
+        else:
+            if data_folder not in os.listdir(self.data_path[::-1].split('/',1)[-1][::-1]):
+                os.mkdir(self.data_path[::-1].split('/',1)[-1][::-1]+'/'+data_folder)
+
+            to_path = self.data_path[::-1].split('/',1)[-1][::-1]+'/'+data_folder+'/'+tss+'_'+name_of_file(self.data_path)
+        
         if file_format in ['.csv','csv']:
-            df.to_csv(tss+'_'+name_of_file(self.data_path)+'_all.csv')
-            print('Wrote to file: '+tss+name_of_file(self.data_path)+'_all.csv')
-            gdf.to_csv(tss+'_'+name_of_file(self.data_path)+'_gasfit.csv')
-            print('Wrote to file: '+tss+name_of_file(self.data_path)+'_gasfit.csv')
+            df.to_csv(to_path+'_raw_and_fitted.csv')
+            print('Wrote to file: '+to_path+'_raw_and_fitted.csv')
+            gdf.to_csv(to_path+'_gasfit.csv')
+            print('Wrote to file: '+to_path+'_gasfit.csv')
         elif file_format in ['excel','xlsx','.xlsx']:
-            df.to_excel(tss+'_'+name_of_file(self.data_path)+'_all.xlsx')
-            print('Wrote to file: '+tss+name_of_file(self.data_path)+'_all.xlsx')
-            gdf.to_excel(tss+'_'+name_of_file(self.data_path)+'_gasfit.xlsx')
-            print('Wrote to file: '+tss+name_of_file(self.data_path)+'_gasfit.xlsx')
+            df.to_excel(to_path+'_raw_and_fitted.xlsx')
+            print('Wrote to file: '+to_path+'_raw_and_fitted.xlsx')
+            gdf.to_excel(to_path+'_gasfit.xlsx')
+            print('Wrote to file: '+to_path+'_gasfit.xlsx')
 
     def run_sequence(self):
         
         print('\n>>> Running QMS fit on file: '+self.data_path)
         timestamp = time_stamp_str()
-        print('    - '+timestamp)
+        print('    timestamp: '+timestamp)
         
         qms_data,qms_gas_data = self.fit_time_data()
         
         print('Finished fitting')
         
         self.calibrate_currents()
-        
-        self.write_to_file('csv',timestamp=timestamp)
-        self.write_to_file('excel',timestamp=timestamp)
+                
+        self.write_to_file('csv',timestamp=timestamp,data_folder='QMS fitting export folder')
+        self.write_to_file('excel',timestamp=timestamp,data_folder='QMS fitting export folder')
 
         print('Finished program')
         

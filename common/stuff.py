@@ -30,9 +30,9 @@ def format_of_file(file_name):
 def name_of_file(file_name):
     comma_index = file_name[::-1].find('.')
     if comma_index == -1:
-        return file_name
+        return file_name.split('/')[-1]
     else:
-        return file_name[:-(comma_index+1)]
+        return file_name[:-(comma_index+1)].split('/')[-1]
     
 def time_stamp_str():
     return datetime.now().strftime("%Y%d%m_%H%M%S")
