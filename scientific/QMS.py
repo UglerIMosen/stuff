@@ -244,20 +244,14 @@ class spectrum_fit(object):
                        pressure_normalization=True,
                        mass_name = '_amu'):
 
-        self.gas_calibration = {#(a,b), fitted as y=ax+b, used as y=ax, error is y*b. 
-                                'CH4' : (5629,-0.117), #R2: 0.9466, 
-                                'CO'  : (3812,-0.040), #R2: 0.9184
-                                'CO2' : (6350,-0.065), #R2: 0.9466
-                                'H2'  : ( 528, 0.176), #R2: 0.9086
-                                'N2'  : (4070,-0.065), #R2: 0.9826
+        self.gas_calibration = {#(a,b), fitted as y=ax, relative error on y=a/b. 
+                                'CH4' : (4580,231/4580), #R2: 0.9114, 
+                                'CO'  : (3737,240/3737), #R2: 0.8905
+                                'CO2' : (5716,139/5716), #R2: 0.9548
+                                'H2'  : ( 633, 22/633), #R2: 0.885
+                                'N2'  : (3693,56/3693), #R2: 0.9778
                                 }
-        
-        if type(ascii_data_set_path) == str:
-            load_data(pressure_normalization=pressure_normalization)
-        else:
-            self.data_present = False
-        self.fit_complete = False
-        
+
         self.gas_list = gasses
         self.mlib = mass_library
         
@@ -272,6 +266,12 @@ class spectrum_fit(object):
         else:
             raise TypeError('"masses_to_skip" must be of type: list, tuple, np.ndarray, int, float, NoneType')
             print('I mean... there is plenty to choose...')
+
+        if type(ascii_data_set_path) == str:
+            self.load_data(ascii_data_set_path,pressure_normalization=pressure_normalization)
+        else:
+            self.data_present = False
+        self.fit_complete = False
         
         if run_sequence:
             self.run_sequence()
@@ -282,6 +282,7 @@ class spectrum_fit(object):
         self.data_path = path
         self.data_present = True
         
+        #if 'External_Pressure' in self.data_set.keys() and pressure_normalization:
         if 'Pressure_(mBar)' in self.data_set.keys() and pressure_normalization:
             self.pressure_normalization = pressure_normalization
         elif pressure_normalization:
@@ -304,9 +305,11 @@ class spectrum_fit(object):
         
         masses = [i for i in data.keys() if isinstance(i,int)]
         spectrum = []
+        #if 'External_Pressure' in data.keys() and self.pressure_normalization:
         if 'Pressure_(mBar)' in data.keys() and self.pressure_normalization:
             for mass in masses:
                 spectrum.append(data[mass][row]/data['Pressure_(mBar)'][row])
+                #spectrum.append(data[mass][row]/data['External_Pressure'][row])
         else:
             for mass in masses:
                 spectrum.append(data[mass][row])
@@ -337,13 +340,19 @@ class spectrum_fit(object):
         return self.gas_masses
     
     def add_gas(self,gas):
-        self.gas_list.append(gas)
-        self.generate_gas_mass_list()
+        if gas not in self.gas_list:
+            self.gas_list.append(gas)
+            self.generate_gas_mass_list()
+        else:
+            print('Gas already present in list.')
         return self.gas_list
 
     def remove_gas(self,gas):
-        self.gas_list.remove(gas)
-        self.generate_gas_mass_list()
+        if gas in self.gas_list:
+            self.gas_list.remove(gas)
+            self.generate_gas_mass_list()
+        else:
+            print('Gas not present in list.')
         return self.gas_list
     
     def generated_mass_spectrum(self,mass_list,*gas_amplitudes,gas_list=None):
@@ -359,7 +368,7 @@ class spectrum_fit(object):
                     trial_currents[list(mass_list).index(mass)] += gas_amp*self.mlib(gas)[mass]
         return trial_currents
     
-    def fit_gas_spectrum(self,spectrum,plot=False,plot_show=True):
+    def fit_gas_spectrum(self,spectrum,plot=False,plot_show=True,echo=False):
         # fit gas amplitudes to a qms spectrum
 
         currents = []        
@@ -390,7 +399,6 @@ class spectrum_fit(object):
         if plot:
             fig, f = plt.subplots()
             
-            
             f.plot([spectrum[0][0]-0.5,*sum([[i,i+0.5] for i in spectrum[0]],[])],[*sum([[0,i] for i in spectrum[1]],[]),0],linestyle=':',label='Raw spectrum')
             f.plot(self.gas_masses,currents,'o',color='tab:blue',label='Data')
             f.plot(self.gas_masses,self.generated_mass_spectrum(self.gas_masses,*fit[0]),'*',color='tab:orange',label='Best fit to data')
@@ -402,10 +410,16 @@ class spectrum_fit(object):
             else:
                 f.set_ylabel('Detector current [A]')
             
+            plt.tight_layout()
             if plot_show:
                 plt.show()
             else:
                 plt.draw()
+        
+        if echo:
+            print('GAS / Current')
+            for current, gas in zip(fit[0],self.gas_list):
+                print(gas, current)
         
         return fit
         
@@ -482,10 +496,15 @@ class spectrum_fit(object):
         if data_folder == None:
             to_path = self.data_path[::-1].split('/',1)[-1][::-1]+'/'+tss+'_'+name_of_file(self.data_path)
         else:
-            if data_folder not in os.listdir(self.data_path[::-1].split('/',1)[-1][::-1]):
-                os.mkdir(self.data_path[::-1].split('/',1)[-1][::-1]+'/'+data_folder)
-
-            to_path = self.data_path[::-1].split('/',1)[-1][::-1]+'/'+data_folder+'/'+tss+'_'+name_of_file(self.data_path)
+            try:
+                if data_folder not in os.listdir(self.data_path[::-1].split('/',1)[-1][::-1]):
+                    os.mkdir(self.data_path[::-1].split('/',1)[-1][::-1]+'/'+data_folder)
+                to_path = self.data_path[::-1].split('/',1)[-1][::-1]+'/'+data_folder+'/'+tss+'_'+name_of_file(self.data_path)
+            except NotADirectoryError:
+                if data_folder not in os.listdir():
+                    os.mkdir(data_folder)
+                to_path = data_folder+'/'+tss+'_'+name_of_file(self.data_path)
+                
         
         if file_format in ['.csv','csv']:
             df.to_csv(to_path+'_raw_and_fitted.csv')
