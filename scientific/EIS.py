@@ -19,7 +19,7 @@ class EIS_figure(object):
         x_length = abs(np.diff(ax.axes.get_xlim())[0])
         y_length = abs(np.diff(ax.axes.get_ylim())[0])
         x_over_y = x_length/y_length
-    
+
         fig = ax.figure
         h, w = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).height, ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted()).width
         area = h*w
@@ -29,7 +29,7 @@ class EIS_figure(object):
             fig.set_size_inches(w*(1/x_over_y)**(1/3), h, forward=True)
         else:
             fig.set_size_inches(w, h*(x_over_y)**(1/3), forward=True)
-    
+
         return ax
 
     def aesthetics(self,figure,ax):
@@ -39,9 +39,9 @@ class EIS_figure(object):
         ax = self.set_equal_aspect(ax)
         plt.gca().invert_yaxis()
         ax.grid(visible=True)
-        ax.legend()#frameon=0,ncol=1)                
+        ax.legend()#frameon=0,ncol=1)
         return figure, ax
-        
+
     def plot(self, data_set, label='',color='k',freq_annotation=False,linestyle='-'):
         for key in data_set.keys():
             if 'R' in key:
@@ -50,7 +50,7 @@ class EIS_figure(object):
                 F_key = key
             if 'I' in key:
                 I_key = key
-        
+
         self.ax.plot(data_set[R_key],data_set[I_key],color=color,label=label,linestyle=linestyle)
         if freq_annotation:
             potens = 0.001
@@ -59,17 +59,17 @@ class EIS_figure(object):
                     potens = 1/potens
                     break
                 potens = potens*10
-            
+
             for Re,Im,F in zip(data_set[R_key],data_set[I_key],data_set[F_key]):
                 if F > potens:
                     self.ax.text(Re,Im,format_e(potens)+' Hz')
                     potens = potens*10
-        
+
     def draw(self):
         self.aesthetics(self.figure,self.ax)
         plt.tight_layout()
         plt.draw()
-        
+
 class EIS_data(object):
 
     def __init__(self,data_set):
@@ -81,7 +81,7 @@ class EIS_data(object):
         self.Rs     = self.find_Rs()[0]
         self.Rtot   = self.find_Rtot()[0]
         self.Rp     = self.find_Rp()[0]
-    
+
     def find_keys(self):
         for key in self.data.keys():
             if 'R' in key:
@@ -91,7 +91,7 @@ class EIS_data(object):
             if 'I' in key:
                 I_key = key
         return R_key, I_key, F_key
-        
+
     def find_Rs(self):
         if np.diff(self.Imag)[-1] > 0:
             sign = 1
@@ -101,7 +101,7 @@ class EIS_data(object):
             if sign*np.diff(self.Imag)[-i] < 0:
                 break
         i = i-1
-        
+
         lower_limit = min(self.Imag[0:-i])
         upper_limit = max(self.Imag[0:-i])
         if upper_limit < 0:
@@ -111,13 +111,13 @@ class EIS_data(object):
                 Rs_index = j
                 break
         return self.Real[-i:][j], j-i
-        
+
     def find_Rtot(self):
         return self.Real[0], 0
-    
+
     def find_Rp(self):
         return self.Rtot-self.Rs, np.nan
-    
+
     def Nyquist(self,color='k',freq_annotation=False,R_annotation=False,legend=False,subfigure=False):
         figure = EIS_figure()
         if R_annotation:
@@ -133,6 +133,9 @@ class EIS_data(object):
         figure.draw()
 
     def Nyquist_curve(self,EIS_fig,color='k',label='',freq_annotation=False,R_annotation=False,legend=False,linestyle='-'):
+        #used to generate plots with multiple graphs. The point is to feed the
+        #"figure object" as "EIS_fig", which is then returned with the new nyquist-graph
+        
         if R_annotation:
             Rs = self.find_Rs()
             Rtot = self.find_Rtot()
