@@ -17,7 +17,7 @@ from matplotlib import pyplot as plt
 fit_tool = spectrum_fit()
 
 class Checkbar(Frame):
-    
+
     def __init__(self, parent=None, picks=[], side=LEFT, anchor=W):
         Frame.__init__(self, parent)
         self.vars = []
@@ -26,7 +26,7 @@ class Checkbar(Frame):
             chk = Checkbutton(self, text=pick, variable=var)
             chk.pack(side=side, anchor=anchor, expand=YES)
             self.vars.append(var)
-    
+
     def state(self):
         return map((lambda var: var.get()), self.vars)
 
@@ -42,7 +42,7 @@ label2.pack(side=LEFT)
 label=Label(root,bg='white',text='')
 label.pack(side=BOTTOM)
 
-def button_run(): 
+def button_run():
     if fit_tool.data_present:
         fit_tool.gas_list = list(np.array(fit_tool.mlib('content'))[[i==1 for i in list(gas_list.state())]])
         fit_tool.generate_gas_mass_list()
@@ -102,21 +102,17 @@ def button_plot_fit():
         f.legend(title='Atomic mass')
         plt.tight_layout()
         plt.show()
-        
+
     else:
         global label
         label.destroy()
         label=Label(root,bg='white',text='ERROR: no data fitted')
         label.pack(side=BOTTOM)
 
-    
+
 
 Button(root, text='Fitted data', command=button_plot_fit).pack(side=RIGHT)
 Button(root, text='Run', command=button_run).pack(side=RIGHT)
 Button(root, text='Raw data', command=button_plot_raw).pack(side=RIGHT)
 Button(root, text='Load', command=load_file).pack(side=RIGHT)
 root.mainloop()
-
-
-
-

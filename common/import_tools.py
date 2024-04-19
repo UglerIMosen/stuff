@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
+import openpyxl
 import sys
 
 from stuff.math.simple import isfloat
@@ -164,3 +165,6 @@ def load_delimited_data(path, delimiter=',',clean_names=''):
                     dictionary[name].append(item.replace('\n','').replace('\r',''))
 
     return dictionary
+
+def import_excel_data(file,sheet,column1,column2,row1,row2):
+    pass

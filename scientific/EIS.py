@@ -3,6 +3,8 @@ from matplotlib import pyplot as plt
 import matplotlib.pylab as pl
 from matplotlib import cm
 
+from stuff.common.filters import smooth
+
 def format_e(n):
     a = '%E' % n
     return a.split('E')[0].rstrip('0').rstrip('.') + 'E' + a.split('E')[1]
@@ -82,6 +84,8 @@ class EIS_data(object):
         self.Rtot   = self.find_Rtot()[0]
         self.Rp     = self.find_Rp()[0]
 
+        self.normalized = 'NO'
+
     def find_keys(self):
         for key in self.data.keys():
             if 'R' in key:
@@ -118,6 +122,18 @@ class EIS_data(object):
     def find_Rp(self):
         return self.Rtot-self.Rs, np.nan
 
+    def normalize(self,area,norm_unit = ''):
+        self.Real = self.Real*area
+        self.Imag = self.Imag*area
+        self.unit = norm_unit
+        self.normalization_area = area
+        self.Rs     = self.find_Rs()[0]
+        self.Rtot   = self.find_Rtot()[0]
+        self.Rp     = self.find_Rp()[0]
+
+        self.normalized = 'YES'
+        return self.Freq,self.Real,self.Imag
+
     def Nyquist(self,color='k',freq_annotation=False,R_annotation=False,legend=False,subfigure=False):
         figure = EIS_figure()
         if R_annotation:
@@ -135,7 +151,7 @@ class EIS_data(object):
     def Nyquist_curve(self,EIS_fig,color='k',label='',freq_annotation=False,R_annotation=False,legend=False,linestyle='-'):
         #used to generate plots with multiple graphs. The point is to feed the
         #"figure object" as "EIS_fig", which is then returned with the new nyquist-graph
-        
+
         if R_annotation:
             Rs = self.find_Rs()
             Rtot = self.find_Rtot()
@@ -145,5 +161,24 @@ class EIS_data(object):
             else:
                 EIS_fig.ax.plot(Rs[0],self.Imag[Rs[1]],'s',color=color)
                 EIS_fig.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',color=color)
-        EIS_fig.plot(self.data,freq_annotation=freq_annotation,color=color,label=label,linestyle=linestyle)
+        EIS_fig.plot({'R' : self.Real, 'I' : self.Imag, 'F' : self.Freq}, freq_annotation=freq_annotation,color=color,label=label,linestyle=linestyle)
         return EIS_fig
+
+class ADIS_cal(object):
+
+    def __init__(self,EIS_data_1,EIS_data_2):
+        self.R = EIS_data_1.Real-EIS_data_2.Real
+        self.I = EIS_data_1.Imag-EIS_data_2.Imag
+        self.F = EIS_data_1.Freq
+
+    def Real(self):
+        return self.F, self.R
+
+    def Imag(self):
+        return self.F, self.I
+
+    def dReal(self,smoothing=10):
+        return self.F[1:], smooth(np.diff(self.R)/np.diff(np.log10(self.F)),smoothing)
+
+    def dImag(self,smoothing=10):
+        return self.F[1:], smooth(np.diff(self.I)/np.diff(np.log10(self.F)),smoothing)
