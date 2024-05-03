@@ -34,14 +34,14 @@ class EIS_figure(object):
 
         return ax
 
-    def aesthetics(self,figure,ax):
+    def aesthetics(self,figure,ax,title=''):
         figure.set_size_inches(self.figure_size[0],self.figure_size[1])
         ax.set_xlabel(r"Z' ["+self.unit+"]")
         ax.set_ylabel(r"Z'' ["+self.unit+"]")
         ax = self.set_equal_aspect(ax)
         plt.gca().invert_yaxis()
         ax.grid(visible=True)
-        ax.legend()#frameon=0,ncol=1)
+        ax.legend(title=title)#frameon=0,ncol=1)
         return figure, ax
 
     def plot(self, data_set, label='',color='k',freq_annotation=False,linestyle='-'):
