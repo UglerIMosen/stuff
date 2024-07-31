@@ -12,3 +12,10 @@ def isfloat(string):
         return True
     except ValueError:
         return False
+
+"""
+def sort_by_int_key(s):
+    return int(re.findall('\d+',s)[0])
+
+files.sort(key=sort_func) #will sort by value of first integer found in file-name
+"""

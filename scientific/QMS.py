@@ -394,7 +394,10 @@ class spectrum_fit(object):
             errorfunc = (np.array(self.generated_mass_spectrum(x_data,*args))-np.array(currents))/max(currents)
             return [abs(i) if i<0 else i*25 for i in errorfunc]
         
-        fit = curve_fit(func,self.gas_masses,np.zeros(len(currents)),p0=gas_amplitudes,bounds=(0.0,np.inf))
+        try:
+            fit = curve_fit(func,self.gas_masses,np.zeros(len(currents)),p0=gas_amplitudes,bounds=(0.0,np.inf))
+        except RuntimeError:
+            return (np.zeros(len(self.gas_list)), None)
         
         if plot:
             fig, f = plt.subplots()
