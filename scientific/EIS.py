@@ -4,10 +4,19 @@ import matplotlib.pylab as pl
 from matplotlib import cm
 
 from stuff.common.filters import smooth
+from stuff.common.import_tools import load_data_with_names
 
 def format_e(n):
     a = '%E' % n
     return a.split('E')[0].rstrip('0').rstrip('.') + 'E' + a.split('E')[1]
+
+def IV(I,V):
+    I = np.array(I)
+    V = np.array(V)
+    Ip0 = np.where(np.array(I) == min(abs(I)))[0]
+    Im0 = np.where(np.array(I) == -min(abs(I)))[0]
+    V0 = np.mean(V[[*Ip0,*Im0]])
+    return I, V-V0
 
 class EIS_figure(object):
 
@@ -136,6 +145,7 @@ class EIS_data(object):
 
     def Nyquist(self,color='k',freq_annotation=False,R_annotation=False,legend=False,subfigure=False):
         figure = EIS_figure()
+        figure.unit = self.unit
         if R_annotation:
             Rs = self.find_Rs()
             Rtot = self.find_Rtot()
@@ -152,6 +162,8 @@ class EIS_data(object):
         #used to generate plots with multiple graphs. The point is to feed the
         #"figure object" as "EIS_fig", which is then returned with the new nyquist-graph
 
+        EIS_fig.unit = self.unit
+
         if R_annotation:
             Rs = self.find_Rs()
             Rtot = self.find_Rtot()
@@ -163,6 +175,9 @@ class EIS_data(object):
                 EIS_fig.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',color=color)
         EIS_fig.plot({'R' : self.Real, 'I' : self.Imag, 'F' : self.Freq}, freq_annotation=freq_annotation,color=color,label=label,linestyle=linestyle)
         return EIS_fig
+
+def EIS_datafile(file_path):
+    return EIS_data(load_data_with_names(file_path))
 
 class ADIS_cal(object):
 
