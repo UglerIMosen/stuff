@@ -4,6 +4,8 @@
 
 #simple mathematic tools
 """
+import numpy as np
+import math
 
 def isfloat(string):
     # tests if the string is "floatable"
@@ -12,6 +14,11 @@ def isfloat(string):
         return True
     except ValueError:
         return False
+
+def round_to_nearest(val,number=1):
+    factor = round(val/number)
+    precision = math.floor(math.log(number-np.trunc(number),10))
+    return round(factor*number,-precision)
 
 """
 def sort_by_int_key(s):
