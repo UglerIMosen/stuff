@@ -136,7 +136,7 @@ def load_data_sheet(path, outcomment='#'):
                 print('In text: '+str(filtered_lines)+'; of line: '+str(row)+'of the file: '+path+'; an error occurred')
     return data_out
 
-def load_delimited_data(path, delimiter=',',clean_names=''):
+def load_delimited_data(path, delimiter=',',clean_names='',fix_empty_values=False):
     #save data in dictionary
     file=open(path,'rb')
     lines=file.readlines()
@@ -163,6 +163,15 @@ def load_delimited_data(path, delimiter=',',clean_names=''):
                     dictionary[name].append(float(item.replace('\n','').replace('\r','')))
                 except ValueError:
                     dictionary[name].append(item.replace('\n','').replace('\r',''))
+
+    if fix_empty_values:
+        for key in dictionary:
+            cache = 0
+            for integ, val in enumerate(dictionary[key]):
+                if val == '':
+                    dictionary[key][integ] = cache
+                else:
+                    cache = val
 
     return dictionary
 
