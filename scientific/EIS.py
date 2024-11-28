@@ -10,13 +10,19 @@ def format_e(n):
     a = '%E' % n
     return a.split('E')[0].rstrip('0').rstrip('.') + 'E' + a.split('E')[1]
 
-def IV(I,V):
-    I = np.array(I)
+def IV(I,V,area='',nernst=False):
+    if area == '':       
+        I = np.array(I)
+    else:
+        I = np.array(I)/area
     V = np.array(V)
-    Ip0 = np.where(np.array(I) == min(abs(I)))[0]
-    Im0 = np.where(np.array(I) == -min(abs(I)))[0]
-    V0 = np.mean(V[[*Ip0,*Im0]])
-    return I, V-V0
+    if nernst:
+        return I, V    
+    else:
+        Ip0 = np.where(np.array(I) == min(abs(I)))[0]
+        Im0 = np.where(np.array(I) == -min(abs(I)))[0]
+        V0 = np.mean(V[[*Ip0,*Im0]])
+        return I, V-V0
 
 class EIS_figure(object):
 
