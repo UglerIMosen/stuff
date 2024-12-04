@@ -39,7 +39,7 @@ def rolling_median_filter(data,cycles = 1,forwards=True,backwards=False):
                 data[index]=np.median([data[index-1],data[index],data[index+1]])
     return data
 
-def high_pass_filter(data1D,cut,soft,damp=1e-6):
+def low_pass_filter(data1D,cut,soft,damp=1e-6):
     filter_mask = fermi(np.arange(0,len(data1D),1),cut,soft)+np.flip(fermi(np.arange(0,len(data1D),1),cut-1,soft,offset=damp))
     fft_filtered_data = filter_mask*np.fft.fft(data1D)
     filtered_data = abs(np.fft.ifft(fft_filtered_data))
