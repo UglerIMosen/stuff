@@ -10,9 +10,15 @@ import warnings
 
 from stuff.common.stuff import fermi
 
-def smooth(f,pts):
+def smooth(f,pts,boundary='same'):
     extent = np.ones(pts)/pts
+    if boundary == 'same':
+        fs = f[0]*np.ones(pts)
+        fe = f[-1]*np.ones(pts)
+        f = np.array([*fs,*f,*fe])
     smoothed_f = np.convolve(f, extent, mode='same')
+    if boundary == 'same':
+        smoothed_f = smoothed_f[pts:-pts]
     return smoothed_f
 
 def median_filter(data,cycles = 1):
@@ -44,7 +50,7 @@ def low_pass_filter(data1D,cut,soft,damp=1e-6):
     fft_filtered_data = filter_mask*np.fft.fft(data1D)
     filtered_data = abs(np.fft.ifft(fft_filtered_data))
     return filtered_data
-    
+
 def bin_data(xy_data, xrange = False, resolution=1):
     xy_data = [np.array(xy_data[0]),np.array(xy_data[1])]
     if not xrange:
@@ -53,11 +59,11 @@ def bin_data(xy_data, xrange = False, resolution=1):
         warnings.warn('The x-data seems inadequate for the chosen resolution. This might cause problems')
     bins = np.arange(xrange[0]-resolution/2,xrange[1]+resolution/2,resolution)
     binned_x_data = np.arange(xrange[0],xrange[1],resolution)
-    
+
     mask = np.logical_and(xy_data[0]>xrange[0],xy_data[0]<xrange[1])
     binned_y_data = (np.histogram(xy_data[0][mask],bins,weights=xy_data[1][mask])[0] / np.histogram(xy_data[0][mask],bins)[0])
     return np.array([binned_x_data,binned_y_data])
-    
+
 def derivative(xy_data,order=1,epsilon = 1e-7):
     if order == 0:
         return xy_data
@@ -77,7 +83,7 @@ def derivative(xy_data,order=1,epsilon = 1e-7):
             dydx = dy/dx
             x = 0.5*(x[:-1]+x[1:])
         return [x,dydx]
-    
+
 def integrate(xy_data):
     if len(xy_data) == 2:
         integrated_sum = [xy_data[1][0]*(xy_data[0][1]-xy_data[0][0])]
