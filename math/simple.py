@@ -16,8 +16,12 @@ def isfloat(string):
         return False
 
 def round_to_nearest(val,number=1):
+    number = abs(number)
     factor = round(val/number)
-    precision = math.floor(math.log(number-np.trunc(number),10))
+    try:
+        precision = math.floor(math.log(number-np.trunc(number),10))
+    except ValueError:
+        return round(factor*number)
     return round(factor*number,-precision)
 
 """
