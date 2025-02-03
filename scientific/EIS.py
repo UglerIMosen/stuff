@@ -11,13 +11,13 @@ def format_e(n):
     return a.split('E')[0].rstrip('0').rstrip('.') + 'E' + a.split('E')[1]
 
 def IV(I,V,area='',nernst=False):
-    if area == '':       
+    if area == '':
         I = np.array(I)
     else:
         I = np.array(I)/area
     V = np.array(V)
     if nernst:
-        return I, V    
+        return I, V
     else:
         Ip0 = np.where(np.array(I) == min(abs(I)))[0]
         Im0 = np.where(np.array(I) == -min(abs(I)))[0]
@@ -151,7 +151,11 @@ class EIS_data(object):
 
     def Nyquist(self,color='k',freq_annotation=False,R_annotation=False,legend=False,subfigure=False):
         figure = EIS_figure()
-        figure.unit = self.unit
+        try:
+            figure.unit = self.unit
+        except AttributeError:
+            print('No unit. Using Eis figure object unit: ', EIS_fig.unit)
+
         if R_annotation:
             Rs = self.find_Rs()
             Rtot = self.find_Rtot()
@@ -168,7 +172,10 @@ class EIS_data(object):
         #used to generate plots with multiple graphs. The point is to feed the
         #"figure object" as "EIS_fig", which is then returned with the new nyquist-graph
 
-        EIS_fig.unit = self.unit
+        try:
+            EIS_fig.unit = self.unit
+        except AttributeError:
+            print('No unit. Using Eis figure object unit: ', EIS_fig.unit)
 
         if R_annotation:
             Rs = self.find_Rs()
