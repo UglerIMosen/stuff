@@ -5,22 +5,6 @@ from tools.misc import round_to_nearest
 import numpy as np
 import warnings
 import time
-### LIST COMMANDS ###
-"""
-LIST:cmd - List command
-LIST:CLE - clear list
-LIST:COUN - how many repetitions. 0-255, 0 means indefinitely
-LIST:DWEL - minimum 0.0005, upto 10 s
-LIST:CURR - adds current value points. up to 1002 data points
-LIST:VOLT - adds voltage value points. up to 1002 data points
-LIST:CURR:POIN? -number of points
-LIST:DWEL:POIN? -nubmer of dwell times
-
-VOLT:MODE LIST - execute VOLT list
-CURR:MODE LIST - execute CURR list
-
-
-"""
 
 class kepco_prg_oriented(object):
     #simplified towards running a device
