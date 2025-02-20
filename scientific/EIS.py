@@ -49,13 +49,13 @@ class EIS_figure(object):
 
         return ax
 
-    def aesthetics(self,figure,ax,title=''):
+    def aesthetics(self,figure,ax,title='',grid=True):
         figure.set_size_inches(self.figure_size[0],self.figure_size[1])
         ax.set_xlabel(r"Z' ["+self.unit+"]")
         ax.set_ylabel(r"Z'' ["+self.unit+"]")
         ax = self.set_equal_aspect(ax)
         plt.gca().invert_yaxis()
-        ax.grid(visible=True)
+        ax.grid(visible=grid)
         ax.legend(title=title)#frameon=0,ncol=1)
         return figure, ax
 
@@ -82,8 +82,8 @@ class EIS_figure(object):
                     self.ax.text(Re,Im,format_e(potens)+' Hz')
                     potens = potens*10
 
-    def draw(self):
-        self.aesthetics(self.figure,self.ax)
+    def draw(self,grid=True,legend_title=''):
+        self.aesthetics(self.figure,self.ax,grid=grid,title=legend_title)
         plt.tight_layout()
         plt.draw()
 
