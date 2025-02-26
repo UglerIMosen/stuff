@@ -24,6 +24,36 @@ def IV(I,V,area='',nernst=False):
         V0 = np.mean(V[[*Ip0,*Im0]])
         return I, V-V0
 
+def IV_class(object):
+
+    def __init__(self,I,V,area=''):
+        self.I = I
+        self.V = V
+        self.area = area
+        self.I_area, self.V_mOCV = IV(I,V,area=self.area)
+        self.R = self.zero_current_resistance(self.I,self.V)
+        self.ASR = self.zero_current_resistance(self.I_area,self.V)
+
+    def IV(self,I,V,area='',nernst=False):
+        if area == '':
+            I = np.array(I)
+        else:
+            I = np.array(I)/area
+        V = np.array(V)
+        if nernst:
+            return I, V
+        else:
+            Ip0 = np.where(np.array(I) == min(abs(I)))[0]
+            Im0 = np.where(np.array(I) == -min(abs(I)))[0]
+            V0 = np.mean(V[[*Ip0,*Im0]])
+            return I, V-V0
+
+    def zero_current_resistance(self,I,V,based_values=10):        
+        i = np.where(I==min(I,key=abs))
+        R = np.diff(I[i-based_values:i+based_values])/np.diff(V[i-based_values:i+based_values])
+        return R
+
+
 class EIS_figure(object):
 
     def __init__(self):
