@@ -5,6 +5,20 @@ from tools.misc import round_to_nearest
 import numpy as np
 import warnings
 import time
+### LIST COMMANDS ###
+"""
+"power program" oriented driver for Kepco BOP psu
+The interface is the BIT 802E interface card, and the telnet protocol
+
+self.ON/OFF uses the "OUTP" command
+self.REMOTE uses the "SYST:REM" command
+self.START runs the "LIST"
+self.STOP stops the list, and set the PSU to constant current at 0 ampere
+all power-settings are set using self.PROGRAM with either 'DC', 'AC:DC' or 'IV CURVE' and self.START to run it
+programs are repeteated indefinitely
+
+thanks to assoc.prof. Xiufu at DTU Energy for healthy discussions
+"""
 
 class kepco_prg_oriented(object):
     #simplified towards running a device
@@ -29,7 +43,8 @@ class kepco_prg_oriented(object):
         self.__mode__()
         self.__program__()
         #self.__init__('CURR')
-        self.get_limits()
+        self.__limits__()
+        self.__remote__()
 
         self.prg_mode  = None
         self.func      = None
@@ -38,10 +53,10 @@ class kepco_prg_oriented(object):
         self.frequency = None
         self.dutycycle = None
 
-    def write(self,cmd,echo=False,written=False):
+    def write(self,command,echo=False,written=False):
         if written:
-            self.command = cmd
-        cmd = cmd + '\r\n'
+            self.command = command
+        cmd = command + '\r\n'
         self.comm.write(cmd.encode())
         time.sleep(self.time_delay)
         if '?' in cmd:
@@ -49,7 +64,7 @@ class kepco_prg_oriented(object):
         else:
             self.response = ''
         if echo:
-            self.echo = cmd+' >>> '+self.response
+            self.echo = command+' >>> '+self.response
             print(self.echo)
         return self.response
 
@@ -91,13 +106,24 @@ class kepco_prg_oriented(object):
         return self.program
 
     def __limits__(self):
-        from_name = self.name().split(' ')[2].split('-')
+        from_name = self.name.split(' ')[2].split('-')
         self.limits = {'VOLT': float(from_name[0]),
                        'CURR': float(from_name[1])}
         return self.limits
 
+    def __remote__(self):
+        value = self.write('SYST:REM?')
+        if value == '1':
+            self.remote = True
+        elif value == '0':
+            self.remote = False
+        else:
+            print('Recieved unexpected response: ',value)
+            self.program = None
+        return self.remote
+
     def __I__(self):
-        i = float(self.write('MEAS:CURR?'))
+        self.i = float(self.write('MEAS:CURR?'))
         return self.i
 
     def __V__(self):
@@ -105,13 +131,18 @@ class kepco_prg_oriented(object):
         return self.v
 
     def INIT(self,mode):
-        if value not in ['CURR','VOLT']:
+        if mode not in ['CURR','VOLT']:
             raise ValueError('Value has to be "CURR" or "VOLT"')
-        self.write('FUNC:MODE '+mode)
-        self.write(mode+':MODE FIX')
         self.write(mode+' 0')
         return self.__mode__()
 
+    def REMOTE(self):
+        if self.remote:
+            self.write('SYST:REM 0')
+        elif not self.remote:
+            self.write('SYST:REM 1')
+        return self.__remote__()
+        
     def OFF(self):
         self.write('OUTP 0')
         return self.__state__()
@@ -120,7 +151,9 @@ class kepco_prg_oriented(object):
         self.write('OUTP 1')
         return self.__state__()
 
-    def build_LIST_POIN(self,arr,precision=self.accuracy):
+    def build_LIST_POIN(self,arr,precision=''):
+        if precision == '':
+            precision = self.accuracy
         #utility function for the LIST commands
         strarrout = []
         strout = ''
@@ -153,6 +186,13 @@ class kepco_prg_oriented(object):
         self.frequency = frequency
         self.dutycycle = dutycycle
 
+        if self.func == 'DC':
+            self.amplitude = 0
+            self.frequency = 0
+            self.dutycycle = 1
+        elif self.func == 'IV CURVE':
+            self.dutycycle = 0.5
+
         #limit values
         sphigh = self.offset+self.amplitude
         if sphigh > self.limits[self.prg_mode]:
@@ -171,7 +211,7 @@ class kepco_prg_oriented(object):
 
         #program
         if func == 'DC':
-            self.write('LIST:'+self.prg_mode+' '+self.offset)
+            self.write('LIST:'+self.prg_mode+' '+str(self.offset))
             self.write('LIST:DWEL 10')
 
         elif func == 'AC:DC':
@@ -197,7 +237,9 @@ class kepco_prg_oriented(object):
 
         elif func == 'IV CURVE':
             if self.prg_mode == 'VOLT':
-                zero = self.meas_volt()
+                self.write('CURR 0')
+                time.sleep(self.time_delay)
+                zero = self.__V__()
             elif self.prg_mode == 'CURR':
                 zero = 0
             points = (2*self.amplitude)/self.accuracy
@@ -235,12 +277,12 @@ class kepco_prg_oriented(object):
         else:
             self.write('FUNC:MODE '+self.prg_mode)
             self.ON()
-            self.write(self.prg_mode+':MODE LIST'):
+            self.write(self.prg_mode+':MODE LIST')
         return self.__program__(), self.__mode__()
 
     def STOP(self):
-        self.OFF()
-        self.write(self.mode+':MODE FIXED'):
+        #self.OFF()
+        self.INIT('CURR')
         return self.__program__(), self.__mode__()
 
 if __name__ == '__main__':
