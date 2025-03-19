@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """ driver for kepco bop d powersupply """
 import telnetlib
-from tools.misc import round_to_nearest
+from math.simple import round_to_nearest
 import numpy as np
 import warnings
 import time
