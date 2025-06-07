@@ -4,13 +4,31 @@
 """
 from scipy.stats import linregress
 from scipy.optimize import curve_fit
-
 import numpy as np
 from matplotlib import pyplot as plt
+
+from stuff.math.functions import polynomial_function
+
+def index_min(array):
+    output = np.where(array == min(array))
+    return output[0][0], min(array), output[0]
+
+def index_max(array):
+    output = np.where(array == max(array))
+    return output[0][0], max(array), output[0]
 
 def rsqr(ydat,model_dat):
     return 1-sum((np.array(ydat)-np.array(model_dat))**2)/sum((np.array(ydat)-np.mean(ydat))**2)
 
+def polynomial_fit(xdata,ydata,order,p0=None):
+    #make a polynomial fit of order. p0 is a list of initial guesses starting at lowest order
+    if p0 == None:
+        p0 = np.ones(order)
+    else:
+        if len(p0) != order:
+            raise ValueError('len of p0 needs to match the specified order')
+    popt, pcov = curve_fit(polynomial_function, xdata, ydata,p0=p0)
+    return popt,pcov
 
 def linear_fit_plot(datx_raw,daty_raw,plotshow=True,title=None,intercept=True,start_index=0,end_index=0):
     if start_index == 0 and end_index == 0:

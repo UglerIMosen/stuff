@@ -2,9 +2,14 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.pylab as pl
 from matplotlib import cm
+import os
+from scipy.optimize import curve_fit
 
 from stuff.common.filters import smooth
 from stuff.common.import_tools import load_data_with_names
+from stuff.math.statistics import index_min, index_max, polynomial_fit
+from stuff.math.filters import eliminate_phaseshift
+from stuff.math.functions import polynomial_function
 
 def format_e(n):
     a = '%E' % n
@@ -24,34 +29,87 @@ def IV(I,V,area='',nernst=False):
         V0 = np.mean(V[[*Ip0,*Im0]])
         return I, V-V0
 
+def EIS_datafile(file_path):
+    return EIS_data(load_data_with_names(file_path))
+
+def fit_for_deareis(filepath,area = 1):
+    file = open(filepath)
+    if area != 1:
+        new_filepath = filepath[:-len(filepath.split('.')[-1])-1]+'_ffd_'+str(area)+'.'+filepath.split('.')[-1]
+    else:
+        new_filepath = filepath[:-len(filepath.split('.')[-1])-1]+'_ffd.'+filepath.split('.')[-1]
+    if os.path.exists(new_filepath):
+        raise FileExistsError(f"The file '{new_filepath}' already exists.")
+    else:
+        new_file = open(new_filepath,'a')
+        new_file.write('f,re,im\n')
+        for line in file.readlines()[1:]:
+            new_line = [str(float(i)*area) for i in line.split(',')]
+            new_file.write(','.join(new_line)+'\n')
+        new_file.close()
+    return new_filepath
+
 class IV_class(object):
 
-    def __init__(self,I,V,area='',based_points=10):
-        self.I = I
-        self.V = V
-        self.area = area
-        self.I_area, self.V_mOCV = IV(I,V,area=self.area)
-        self.R = self.zero_current_resistance(self.I,self.V,based_values=based_points)
-        self.ASR = self.zero_current_resistance(self.I_area,self.V,based_values=based_points)
-
-    def IV(self,I,V,area='',nernst=False):
-        if area == '':
-            I = np.array(I)
+    def __init__(self,I,V,area='',polynomial_order=7,calibrate=True):
+        self.I = np.array(I)
+        self.V = np.array(V)
+        if calibrate:
+            try:
+                self.I, self.V = self.calibrate_I_and_V(I,V)
+            except:
+                print('Could not perform phase correction')
+        self.area   = area
+        self.I_area = self.I/self.area
+        self.polyfit_IV(order=polynomial_order)
+        if area != '':
+            self.ASR = self.R*area
         else:
-            I = np.array(I)/area
-        V = np.array(V)
-        if nernst:
-            return I, V
-        else:
-            Ip0 = np.where(np.array(I) == min(abs(I)))[0]
-            Im0 = np.where(np.array(I) == -min(abs(I)))[0]
-            V0 = np.mean(V[[*Ip0,*Im0]])
-            return I, V-V0
+            self.ASR = ''
 
-    def zero_current_resistance(self,I,V,based_values=10):        
-        i = np.where(abs(np.array(I))==min(abs(np.array(I))))[0][0]
-        R = np.diff(V[i-based_values:i+based_values])/np.diff(I[i-based_values:i+based_values])
-        return np.mean([j for j in R if j < np.inf and j > -np.inf])
+    def calibrate_I_and_V(self,I,V):
+        return eliminate_phaseshift(I,V)
+
+    def polyfit_IV(self,order=7):
+        self.popt,self.pov = polynomial_fit(self.I,self.V,order)
+        self.OCV    = self.popt[0]
+        self.R      = self.popt[1]
+        self.fitV   = polynomial_function(self.I,*self.popt)
+        self.V_mOCV = self.V-self.OCV
+        return self.I,self.fitV
+
+    def plot(self,title='',show=True,digits=3):
+        fig, f = plt.subplots()
+        f.plot(self.I,self.V,label='data',marker='s',color='k')
+        f.plot(self.I,self.fitV,label='fitted')
+        f.plot(self.I,self.OCV+self.R*self.I,label='R: '+str(round(10**digits*self.R)/10**digits))
+        f.axhline(self.OCV,label='OCV: '+str(round(10**digits*self.OCV)/10**digits))
+        f.legend(title=title,frameon=0)
+        f.set_ylabel('Voltage')
+        f.set_xlabel('Current')
+        if show:
+            plt.show()
+        else:
+            plt.draw()
+
+    #def IV(self,I,V,area='',nernst=False):
+    #    if area == '':
+    #        I = np.array(I)
+    #    else:
+    #        I = np.array(I)/area
+    #    V = np.array(V)
+    #    if nernst:
+    #        return I, V
+    #    else:
+    #        Ip0 = np.where(np.array(I) == min(abs(I)))[0]
+    #        Im0 = np.where(np.array(I) == -min(abs(I)))[0]
+    #        V0 = np.mean(V[[*Ip0,*Im0]])
+    #        return I, V-V0
+
+    #def zero_current_resistance(self,I,V,based_values=10):
+    #    i = np.where(abs(np.array(I))==min(abs(np.array(I))))[0][0]
+    #    R = np.diff(V[i-based_values:i+based_values])/np.diff(I[i-based_values:i+based_values])
+    #    return np.mean([j for j in R if j < np.inf and j > -np.inf])
 
 
 class EIS_figure(object):
@@ -141,6 +199,11 @@ class EIS_data(object):
                 I_key = key
         return R_key, I_key, F_key
 
+    def limit_data(self,start,end):
+        self.Real = self.Real[start:end]
+        self.Imag = self.Imag[start:end]
+        self.Freq = self.Freq[start:end]
+
     def find_Rs(self):
         if np.diff(self.Imag)[-1] > 0:
             sign = 1
@@ -179,7 +242,7 @@ class EIS_data(object):
         self.normalized = 'YES'
         return self.Freq,self.Real,self.Imag
 
-    def Nyquist(self,color='k',freq_annotation=False,R_annotation=False,legend=False,subfigure=False):
+    def Nyquist(self,color='k',linestyle='-',freq_annotation=False,R_annotation=False,legend=False,subfigure=False):
         figure = EIS_figure()
         try:
             figure.unit = self.unit
@@ -190,12 +253,12 @@ class EIS_data(object):
             Rs = self.find_Rs()
             Rtot = self.find_Rtot()
             if legend:
-                figure.ax.plot(Rs[0],self.Imag[Rs[1]],'s',label='Rs',color=color)
-                figure.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',label='Rtot',color=color)
+                figure.ax.plot(Rs[0],self.Imag[Rs[1]],'s',label='Rs',color=color,linestyle=linestyle)
+                figure.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',label='Rtot',color=color,linestyle=linestyle)
             else:
-                figure.ax.plot(Rs[0],self.Imag[Rs[1]],'s',color=color)
-                figure.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',color=color)
-        figure.plot(self.data,freq_annotation=freq_annotation,color=color)
+                figure.ax.plot(Rs[0],self.Imag[Rs[1]],'s',color=color,linestyle=linestyle)
+                figure.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',color=color,linestyle=linestyle)
+        figure.plot(self.data,freq_annotation=freq_annotation,color=color,linestyle=linestyle)
         figure.draw()
 
     def Nyquist_curve(self,EIS_fig,color='k',label='',freq_annotation=False,R_annotation=False,legend=False,linestyle='-'):
@@ -218,9 +281,6 @@ class EIS_data(object):
                 EIS_fig.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',color=color)
         EIS_fig.plot({'R' : self.Real, 'I' : self.Imag, 'F' : self.Freq}, freq_annotation=freq_annotation,color=color,label=label,linestyle=linestyle)
         return EIS_fig
-
-def EIS_datafile(file_path):
-    return EIS_data(load_data_with_names(file_path))
 
 class ADIS_cal(object):
 

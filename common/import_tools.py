@@ -44,7 +44,7 @@ def load_data_with_names(path, name_spacing = ', '):
     lines=file.readlines()
 
     #find lines with numbers, making a mask. Assuming this is the data
-    init_chars = [line[0:2] for line in lines]
+    init_chars = [line[0:1] for line in lines]
     mask = [isfloat(char) for char in init_chars]
 
     #finding the line with names, assuming it is the last line containing text before the data
@@ -136,7 +136,7 @@ def load_data_sheet(path, outcomment='#'):
                 print('In text: '+str(filtered_lines)+'; of line: '+str(row)+'of the file: '+path+'; an error occurred')
     return data_out
 
-def load_delimited_data(path, delimiter=',',clean_names='',fix_empty_values=False):
+def load_delimited_data(path, delimiter=',',clean_names='',fix_empty_values=False,numpy_array=True):
     #save data in dictionary
     file=open(path,'rb')
     lines=file.readlines()
@@ -172,6 +172,10 @@ def load_delimited_data(path, delimiter=',',clean_names='',fix_empty_values=Fals
                     dictionary[key][integ] = cache
                 else:
                     cache = val
+
+    if numpy_array:
+        for key in dictionary.keys():
+            dictionary[key] = np.array(dictionary[key])
 
     return dictionary
 
