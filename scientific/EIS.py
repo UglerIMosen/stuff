@@ -115,7 +115,7 @@ class IV_class(object):
 class EIS_figure(object):
 
     def __init__(self):
-        self.figure_size = (8,10)
+        self.figure_size = (8,5)
         self.unit = '$\Omega$ cm$^2$'
         self.figure, self.ax = plt.subplots()
 
@@ -142,6 +142,21 @@ class EIS_figure(object):
         ax.set_xlabel(r"Z' ["+self.unit+"]")
         ax.set_ylabel(r"Z'' ["+self.unit+"]")
         ax = self.set_equal_aspect(ax)
+        plt.gca().invert_yaxis()
+        ax.grid(visible=grid)
+        ax.legend(title=title)#frameon=0,ncol=1)
+        return figure, ax
+
+    def man_aesthetics(self,figure,ax,xlim,ylim,title='',grid=True,size=''):
+        if type(size) == list:
+            figure.set_size_inches(size[0],size[1])
+        else:
+            figure.set_size_inches(self.figure_size[0],self.figure_size[1])
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        ax.set_xlabel(r"Z' ["+self.unit+"]")
+        ax.set_ylabel(r"Z'' ["+self.unit+"]")
+        plt.gca().set_aspect('equal')
         plt.gca().invert_yaxis()
         ax.grid(visible=grid)
         ax.legend(title=title)#frameon=0,ncol=1)
@@ -223,6 +238,9 @@ class EIS_data(object):
                 Rs_index = j
                 break
         return self.Real[-i:][j], j-i
+
+    def simpleRs(self):
+        pass
 
     def find_Rtot(self):
         return self.Real[0], 0
