@@ -140,9 +140,9 @@ class EIS_figure(object):
     def aesthetics(self,figure,ax,title='',grid=True):
         figure.set_size_inches(self.figure_size[0],self.figure_size[1])
         ax.set_xlabel(r"Z' ["+self.unit+"]")
-        ax.set_ylabel(r"Z'' ["+self.unit+"]")
+        ax.set_ylabel(r"-Z'' ["+self.unit+"]")
         ax = self.set_equal_aspect(ax)
-        plt.gca().invert_yaxis()
+        #plt.gca().invert_yaxis()
         ax.grid(visible=grid)
         ax.legend(title=title)#frameon=0,ncol=1)
         return figure, ax
@@ -155,9 +155,9 @@ class EIS_figure(object):
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
         ax.set_xlabel(r"Z' ["+self.unit+"]")
-        ax.set_ylabel(r"Z'' ["+self.unit+"]")
+        ax.set_ylabel(r"-Z'' ["+self.unit+"]")
         plt.gca().set_aspect('equal')
-        plt.gca().invert_yaxis()
+        #plt.gca().invert_yaxis()
         ax.grid(visible=grid)
         ax.legend(title=title)#frameon=0,ncol=1)
         return figure, ax
@@ -171,8 +171,8 @@ class EIS_figure(object):
             if 'I' in key:
                 I_key = key
 
-        self.ax.plot(data_set[R_key],data_set[I_key],color=color,label=label,linestyle=linestyle)
-        if freq_annotation:
+        self.ax.plot(data_set[R_key],-data_set[I_key],color=color,label=label,linestyle=linestyle)
+        if freq_annotation == True:
             potens = 0.001
             for F in data_set[F_key]:
                 if round(F*potens) != 0:
@@ -182,8 +182,21 @@ class EIS_figure(object):
 
             for Re,Im,F in zip(data_set[R_key],data_set[I_key],data_set[F_key]):
                 if F > potens:
-                    self.ax.text(Re,Im,format_e(potens)+' Hz')
+                    self.ax.text(Re,-Im,format_e(potens)+' Hz')
                     potens = potens*10
+        elif freq_annotation in ['points','pp','p']:
+            potens = 0.001
+            for F in data_set[F_key]:
+                if round(F*potens) != 0:
+                    potens = 1/potens
+                    break
+                potens = potens*10
+            for Re,Im,F in zip(data_set[R_key],data_set[I_key],data_set[F_key]):
+                if F > potens:
+                    self.ax.plot(Re,-Im,'o',color=color)
+                    potens = potens*10
+
+
 
     def draw(self,grid=True,legend_title=''):
         self.aesthetics(self.figure,self.ax,grid=grid,title=legend_title)
@@ -271,11 +284,11 @@ class EIS_data(object):
             Rs = self.find_Rs()
             Rtot = self.find_Rtot()
             if legend:
-                figure.ax.plot(Rs[0],self.Imag[Rs[1]],'s',label='Rs',color=color,linestyle=linestyle)
-                figure.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',label='Rtot',color=color,linestyle=linestyle)
+                figure.ax.plot(Rs[0],-self.Imag[Rs[1]],'s',label='Rs',color=color,linestyle=linestyle)
+                figure.ax.plot(Rtot[0],-self.Imag[Rtot[1]],'o',label='Rtot',color=color,linestyle=linestyle)
             else:
-                figure.ax.plot(Rs[0],self.Imag[Rs[1]],'s',color=color,linestyle=linestyle)
-                figure.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',color=color,linestyle=linestyle)
+                figure.ax.plot(Rs[0],-self.Imag[Rs[1]],'s',color=color,linestyle=linestyle)
+                figure.ax.plot(Rtot[0],-self.Imag[Rtot[1]],'o',color=color,linestyle=linestyle)
         figure.plot(self.data,freq_annotation=freq_annotation,color=color,linestyle=linestyle)
         figure.draw()
 
@@ -292,11 +305,11 @@ class EIS_data(object):
             Rs = self.find_Rs()
             Rtot = self.find_Rtot()
             if legend:
-                EIS_fig.ax.plot(Rs[0],self.Imag[Rs[1]],'s',label='Rs',color=color)
-                EIS_fig.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',label='Rtot',color=color)
+                EIS_fig.ax.plot(Rs[0],-self.Imag[Rs[1]],'s',label='Rs',color=color)
+                EIS_fig.ax.plot(Rtot[0],-self.Imag[Rtot[1]],'o',label='Rtot',color=color)
             else:
-                EIS_fig.ax.plot(Rs[0],self.Imag[Rs[1]],'s',color=color)
-                EIS_fig.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',color=color)
+                EIS_fig.ax.plot(Rs[0],-self.Imag[Rs[1]],'s',color=color)
+                EIS_fig.ax.plot(Rtot[0],-self.Imag[Rtot[1]],'o',color=color)
         EIS_fig.plot({'R' : self.Real, 'I' : self.Imag, 'F' : self.Freq}, freq_annotation=freq_annotation,color=color,label=label,linestyle=linestyle)
         return EIS_fig
 

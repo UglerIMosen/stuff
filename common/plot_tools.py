@@ -54,5 +54,3 @@ def pie_marker(x_data,y_data,distribution,color,z_data=None,linecolor=None,lines
             f.scatter(x_data,y_data,z_data,marker=xy,s=markersize,color=piece_color,edgecolors=edgecolors,zorder=2,depthshade=False)
 
     return f
-
-def colormaps()
