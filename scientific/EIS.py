@@ -49,6 +49,9 @@ def fit_for_deareis(filepath,area = 1):
         new_file.close()
     return new_filepath
 
+def SOC_nernst(T,H2,H2O,O2=0.21):
+    return 1.271 - T*2.731e-4 + T*8.314*np.log(H2/H2O*(O2)**0.5)/(2*96485)
+
 class IV_class(object):
 
     def __init__(self,I,V,area='',polynomial_order=7,calibrate=True):
