@@ -193,6 +193,56 @@ class EIS_figure(object):
         plt.tight_layout()
         plt.draw()
 
+class bode_figure(object):
+    def __init__(self):
+        self.figure_size = (8,5)
+        self.unit = '$\Omega$ cm$^2$'
+        self.figure, self.ax = plt.subplots()
+
+    def aesthetics(self,figure,ax,title='',grid=True):
+        figure.set_size_inches(self.figure_size[0],self.figure_size[1])
+        ax.set_xlabel(r"Frequency [Hz]")
+        ax.grid(visible=grid)
+        ax.legend(title=title)#frameon=0,ncol=1)
+        return figure, ax
+
+    def man_aesthetics(self,figure,ax,xlim,ylim,title='',grid=True,size=''):
+        if type(size) == list:
+            figure.set_size_inches(size[0],size[1])
+        else:
+            figure.set_size_inches(self.figure_size[0],self.figure_size[1])
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        ax.set_xlabel(r"Frequency [Hz]")
+        ax.grid(visible=grid)
+        ax.legend(title=title)#frameon=0,ncol=1)
+        return figure, ax
+
+    def plot(self, data_set, label='',color='k',linestyle='-',part='imag'):
+        for key in data_set.keys():
+            if 'R' in key:
+                R_key = key
+            if 'F' in key:
+                F_key = key
+            if 'I' in key:
+                I_key = key
+
+        if part in ['i','I','imag','IMAG','Imag','imaginary','Imaginary','IMAGINARY',"Z''",'Z"','RI','Ri','ri','IM','Im','im']:
+            r_data = -data_set[I_key]
+            self.ax.set_ylabel(r"-Imag ["+self.unit+"]")
+        elif part in ['r','R','real','REAL','Real','Re','RE','re']:
+            r_data = data_set[I_key]
+            self.ax.set_ylabel(r"Real ["+self.unit+"]")
+
+        self.ax.plot(data_set[F_key],r_data,color=color,label=label,linestyle=linestyle)
+        self.ax.set_xscale('log')
+
+    def draw(self,grid=True,legend_title=''):
+        self.aesthetics(self.figure,self.ax,grid=grid,title=legend_title)
+        plt.tight_layout()
+        plt.draw()
+
+
 class EIS_data(object):
 
     def __init__(self,data_set):
@@ -263,12 +313,12 @@ class EIS_data(object):
         self.normalized = 'YES'
         return self.Freq,self.Real,self.Imag
 
-    def Nyquist(self,color='k',linestyle='-',freq_annotation=False,R_annotation=False,legend=False,subfigure=False):
+    def Nyquist(self,color='k',linestyle='-',freq_annotation=False,R_annotation=False,legend=False):
         figure = EIS_figure()
         try:
             figure.unit = self.unit
         except AttributeError:
-            print('No unit. Using Eis figure object unit: ', EIS_fig.unit)
+            print('No unit. Using Eis figure object unit: ', figure.unit)
 
         if R_annotation:
             Rs = self.find_Rs()
@@ -287,6 +337,7 @@ class EIS_data(object):
         #"figure object" as "EIS_fig", which is then returned with the new nyquist-graph
 
         try:
+            EIS_fig
             EIS_fig.unit = self.unit
         except AttributeError:
             print('No unit. Using Eis figure object unit: ', EIS_fig.unit)
@@ -301,7 +352,31 @@ class EIS_data(object):
                 EIS_fig.ax.plot(Rs[0],self.Imag[Rs[1]],'s',color=color)
                 EIS_fig.ax.plot(Rtot[0],self.Imag[Rtot[1]],'o',color=color)
         EIS_fig.plot({'R' : self.Real, 'I' : self.Imag, 'F' : self.Freq}, freq_annotation=freq_annotation,color=color,label=label,linestyle=linestyle)
+
         return EIS_fig
+
+    def Bode(self,color='k',linestyle='-',legend=False):
+        figure = bode_figure()
+        try:
+            figure.unit = self.unit
+        except AttributeError:
+            print('No unit. Using Eis figure object unit: ', figure.unit)
+
+        figure.plot(self.data,color=color,linestyle=linestyle)
+        figure.draw()
+
+    def Bode_curve(self,bode_fig,color='k',label='',legend=False,linestyle='-'):
+        #used to generate plots with multiple graphs. The point is to feed the
+        #"figure object" as "bode_fig", which is then returned with the new nyquist-graph
+
+        try:
+            bode_fig.unit = self.unit
+        except AttributeError:
+            print('No unit. Using Eis figure object unit: ', bode_fig.unit)
+
+        bode_fig.plot({'R' : self.Real, 'I' : self.Imag, 'F' : self.Freq}, color=color,label=label,linestyle=linestyle)
+
+        return bode_fig
 
 class ADIS_cal(object):
 
