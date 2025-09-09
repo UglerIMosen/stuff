@@ -24,6 +24,12 @@ def round_to_nearest(val,number=1):
         return round(factor*number)
     return round(factor*number,-precision)
 
+def find_closest_value_index(array,value):
+    array = np.asarray(array)
+    index = (np.abs(array-value)).argmin()
+    return index    
+
+
 """
 def sort_by_int_key(s):
     return int(re.findall('\d+',s)[0])
