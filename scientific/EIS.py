@@ -51,12 +51,12 @@ def fit_for_deareis(filepath,area = 1):
 
 def SOC_nernst(T,H2,H2O,O2=0.21,unit='celsius'):
     if unit in ['C','degC','celsius','CELSIUS','Celsius']:
-        T += 273.15
+        t = T+273.15
     elif unit in ['K','degK','KELVIN','Kelvin','kelvin']:
-        T = T
+        t = T
     else:
         print('Unit not recoqnized. Using kelvin')
-    return 1.271 - T*2.731e-4 + T*8.314*np.log(H2/H2O*(O2)**0.5)/(2*96485)
+    return 1.271 - t*2.731e-4 + t*8.314*np.log(H2/H2O*(O2)**0.5)/(2*96485)
 
 class IV_class(object):
 
@@ -402,4 +402,5 @@ class ADIS_cal(object):
 
     def dImag(self,smoothing=10):
         return self.F[1:], smooth(np.diff(self.I)/np.diff(np.log10(self.F)),smoothing)
+
 
