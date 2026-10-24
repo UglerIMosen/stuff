@@ -12,6 +12,7 @@ from scipy.signal import correlate
 from stuff.common.stuff import fermi
 
 def smooth(f,pts,boundary='same'):
+    f = np.array(f)
     extent = np.ones(pts)/pts
     if boundary == 'same':
         fs = f[0]*np.ones(pts)
