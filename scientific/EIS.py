@@ -56,7 +56,8 @@ def SOC_nernst(T,H2,H2O,O2=0.21,unit='celsius'):
         t = T
     else:
         print('Unit not recoqnized. Using kelvin')
-    return 1.271 - t*2.731e-4 + t*8.314*np.log(H2/H2O*(O2)**0.5)/(2*96485)
+    #return 1.271 - t*2.731e-4 + t*8.314*np.log(H2/H2O*(O2)**0.5)/(2*96485)
+    return 1.2575-2e-4*t-2e-8*t**2 + t*8.314*np.log(H2/H2O*(O2)**0.5)/(2*96485)
 
 class IV_class(object):
 
